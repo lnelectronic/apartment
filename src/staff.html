@@ -185,6 +185,24 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     [hidden] { display: none !important; }
+
+    /* ─── Missing rooms ─── */
+    .missing-card {
+      background: white; border-radius: 12px;
+      padding: 16px 20px; margin-bottom: 16px;
+    }
+    .missing-title {
+      font-size: 0.82rem; font-weight: 700; color: #888;
+      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .room-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-size: 0.8rem; font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .chip-c   { background: #e8f0fe; color: #1a56db; }
+    .chip-r   { background: #fef3e2; color: #b45309; }
+    .all-done { font-size: 0.9rem; color: #27ae60; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -192,6 +210,14 @@
 <!-- ════════════════════════════════════════
      SECTION 1: ค้นหาห้อง
 ════════════════════════════════════════ -->
+<!-- ════════ ห้องที่ยังไม่ได้จด ════════ -->
+<div id="sect-missing" class="missing-card">
+  <div class="missing-title">ยังไม่ได้จด — <span id="missing-month"></span></div>
+  <div id="missing-chips" class="room-chips">
+    <span style="color:#aaa;font-size:0.85rem">กำลังโหลด...</span>
+  </div>
+</div>
+
 <div id="sect-search">
   <div class="card">
     <h1>จดมิเตอร์ห้องพัก</h1>
@@ -347,6 +373,39 @@ function showOnly(id) {
   });
 }
 
+// ── Missing rooms ──
+var _missingRooms = [];
+
+function loadMissingRooms() {
+  var my = currentMonthYear();
+  document.getElementById('missing-month').textContent = my;
+  google.script.run
+    .withSuccessHandler(function(rooms) {
+      _missingRooms = rooms;
+      renderMissingChips();
+    })
+    .getMissingRooms(my);
+}
+
+function renderMissingChips() {
+  var el = document.getElementById('missing-chips');
+  if (!_missingRooms.length) {
+    el.innerHTML = '<span class="all-done">✓ จดครบทุกห้องแล้ว</span>';
+    return;
+  }
+  el.innerHTML = _missingRooms.map(function(r) {
+    var cls = r[0] === 'C' ? 'chip-c' : 'chip-r';
+    return '<span class="chip ' + cls + '">' + r + '</span>';
+  }).join('');
+}
+
+function removeMissingRoom(roomId) {
+  _missingRooms = _missingRooms.filter(function(r) { return r !== roomId; });
+  renderMissingChips();
+}
+
+loadMissingRooms();
+
 // ──────────────────────────────────────────
 // Room banner
 // ──────────────────────────────────────────
@@ -395,6 +454,11 @@ function onRoomLoaded(res) {
 
   if (!res.found) {
     showMsg('msg-search', 'ไม่พบห้องนี้ กรุณาติดต่อแอดมิน', 'error');
+    return;
+  }
+
+  if (res.vacant) {
+    showMsg('msg-search', 'ห้อง ' + S.roomId + ' ว่างอยู่ ยังไม่มีผู้เช่า', 'error');
     return;
   }
 
@@ -547,6 +611,7 @@ document.getElementById('btn-save').addEventListener('click', function() {
   google.script.run
     .withSuccessHandler(function() {
       setLoading('btn-save', false, 'บันทึก');
+      removeMissingRoom(S.roomId);
       document.getElementById('success-room').textContent = S.roomId;
       showOnly('sect-success');
     })

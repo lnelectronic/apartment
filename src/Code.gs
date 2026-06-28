@@ -9,15 +9,22 @@ function doGet(e) {
 }
 
 // เรียกจาก admin.html: google.script.run.checkPassword(pw)
+// ADMIN_PASSWORDS = JSON array เช่น ["pass1","pass2"] — ตรงกับรายการใดก็ผ่าน
 function checkPassword(pw) {
-  var stored = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
-  return pw === stored;
+  var props = PropertiesService.getScriptProperties();
+  var list = props.getProperty('ADMIN_PASSWORDS');
+  if (list) {
+    try { return JSON.parse(list).indexOf(pw) !== -1; } catch (e) {}
+  }
+  // fallback: key เดิม
+  return pw === props.getProperty('ADMIN_PASSWORD');
 }
 
 // เรียกจาก meter.html: ตรวจสอบห้องและดึงมิเตอร์เริ่มต้น ไม่ส่งข้อมูลการเงิน
 function getRoomForMeter(roomId, monthYear) {
   var room = getRoom(roomId);
   if (!room) return { found: false };
+  if (!room.name) return { found: true, vacant: true };
 
   var existing = getRecordThisMonth(roomId, monthYear);
   if (existing) return { found: true, blocked: true };
@@ -44,6 +51,7 @@ function getRoomForMeter(roomId, monthYear) {
 function getRoomForStaff(roomId, monthYear) {
   var room = getRoom(roomId);
   if (!room) return { found: false };
+  if (!room.name) return { found: true, vacant: true };
 
   var rates      = getRates(roomId[0]) || { water: 0, electricity: 0 };
   var existing   = getRecordThisMonth(roomId, monthYear);

@@ -305,23 +305,25 @@ function checkOutRoom(roomId) {
 }
 
 function getAllRoomsInfo() {
-  var data = _getSettingsSheet().getRange('A6:D51').getValues();
+  var data = _getSettingsSheet().getRange('A6:F51').getValues();
   return data
     .filter(function(r) { return r[0] !== ''; })
     .map(function(r) {
-      return { roomId: r[0], name: r[1], rent: r[2], furniture: r[3] };
+      return { roomId: r[0], name: r[1], rent: r[2], furniture: r[3], elecInit: r[4], waterInit: r[5] };
     });
 }
 
 function updateRoomInfo(roomId, info) {
   var sheet = _getSettingsSheet();
-  var data  = sheet.getRange('A6:D51').getValues();
+  var data  = sheet.getRange('A6:F51').getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] !== roomId) continue;
     var r = i + 6; // data row → sheet row (ข้อมูลเริ่ม row 6)
     if (info.name      !== undefined) sheet.getRange(r, 2).setValue(info.name);
     if (info.rent      !== undefined) sheet.getRange(r, 3).setValue(info.rent);
     if (info.furniture !== undefined) sheet.getRange(r, 4).setValue(info.furniture);
+    if (info.elecInit  !== undefined) sheet.getRange(r, 5).setValue(info.elecInit);
+    if (info.waterInit !== undefined) sheet.getRange(r, 6).setValue(info.waterInit);
     SpreadsheetApp.flush();
     return;
   }

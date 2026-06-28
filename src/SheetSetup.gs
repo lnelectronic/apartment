@@ -131,6 +131,189 @@ function _setupRecordSheet(sheet) {
 }
 
 // ------------------------------------------------------------------ //
+// Test Data (ลบออกก่อนส่งมอบงานจริง)
+// ------------------------------------------------------------------ //
+
+// Scenario ทดสอบ (1/2026–6/2026):
+//   C101: 3/2026 จ่ายไม่ครบ → 4/2026 มีค้าง 365 / 5/2026 จ่ายไม่ครบ → 6/2026 จะเห็นค้าง 400
+//   C201: จ่ายหมดทุกเดือน / 3/2026 มีค่าซ่อม 500 / 6/2026 จดแล้ว (บล็อก+แก้ไขทับ)
+//   C202: ว่าง (ทดสอบ error ห้องว่าง)
+//   R15:  5/2026 ไม่ได้จ่ายเลย → 6/2026 จะเห็นค้าง 3,980 + สถานะค้างจ่าย
+//   R16:  จ่ายหมดทุกเดือน
+//   RC1:  1/2026 มีค่าทำความสะอาด 300 / จ่ายหมดทุกเดือน
+function seedTestData() {
+  var ss            = SpreadsheetApp.getActiveSpreadsheet();
+  var settingsSheet = ss.getSheetByName('ตั้งค่า');
+  var recordSheet   = ss.getSheetByName('บันทึก');
+  if (!settingsSheet || !recordSheet) {
+    throw new Error('ยังไม่ได้รัน setupSheets() — กรุณารัน setupSheets() ก่อน');
+  }
+
+  // 1. ตั้งค่าห้องทดสอบใน "ตั้งค่า"
+  var testRoomInfo = {
+    'C101': { name: 'สมชาย มีสุข',       rent: 3000, furniture: 0,    elecInit: 1000, waterInit: 500 },
+    'C201': { name: 'กาญจนา ดีงาม',      rent: 4000, furniture: 200,  elecInit: 800,  waterInit: 300 },
+    'C202': { name: '',                   rent: 3000, furniture: 0,    elecInit: 0,    waterInit: 0   },
+    'R15':  { name: 'วิชัย สบายดี',      rent: 3500, furniture: 0,    elecInit: 500,  waterInit: 200 },
+    'R16':  { name: 'มานี รักดี',        rent: 3000, furniture: 500,  elecInit: 300,  waterInit: 150 },
+    'RC1':  { name: 'ประยุทธ์ เข้มแข็ง', rent: 5000, furniture: 1000, elecInit: 1500, waterInit: 700 }
+  };
+  var settingsData = settingsSheet.getRange('A6:F51').getValues();
+  settingsData.forEach(function(row, i) {
+    var id = row[0];
+    if (!id || !testRoomInfo[id]) return;
+    var info = testRoomInfo[id];
+    var r    = i + 6;
+    settingsSheet.getRange(r, 2).setValue(info.name);
+    settingsSheet.getRange(r, 3).setValue(info.rent);
+    settingsSheet.getRange(r, 4).setValue(info.furniture);
+    settingsSheet.getRange(r, 5).setValue(info.elecInit);
+    settingsSheet.getRange(r, 6).setValue(info.waterInit);
+  });
+
+  // 2. Records 1/2026–6/2026
+  // meter readings ต่อเนื่องทุกเดือน, ค้างเดือนก่อน = (รวมเดือนก่อน - จ่ายจริงเดือนก่อน)
+  //
+  // C101 (ค่าเช่า=3000, เฟอร์=0, ไฟ×5, น้ำ×10):
+  //   1/26: ไฟ 1000→1042(210), น้ำ 500→513(130), ค้าง=0,   รวม=3340, paid=3340  ← จ่ายหมด
+  //   2/26: ไฟ 1042→1085(215), น้ำ 513→526(130), ค้าง=0,   รวม=3345, paid=3345  ← จ่ายหมด
+  //   3/26: ไฟ 1085→1130(225), น้ำ 526→540(140), ค้าง=0,   รวม=3365, paid=3000  ← ค้าง 365
+  //   4/26: ไฟ 1130→1175(225), น้ำ 540→555(150), ค้าง=365, รวม=3740, paid=3740  ← จ่ายหมด
+  //   5/26: ไฟ 1175→1225(250), น้ำ 555→570(150), ค้าง=0,   รวม=3400, paid=3000  ← ค้าง 400
+  //   6/26: (ยังไม่จด → จะเห็น ค้างเดือนก่อน=400)
+  //
+  // C201 (ค่าเช่า=4000, เฟอร์=200, ไฟ×5, น้ำ×10):
+  //   1/26: ไฟ 800→862(310),  น้ำ 300→317(170), ค้าง=0, รวม=4680, paid=4680  ← จ่ายหมด
+  //   2/26: ไฟ 862→927(325),  น้ำ 317→334(170), ค้าง=0, รวม=4695, paid=4695  ← จ่ายหมด
+  //   3/26: ไฟ 927→992(325),  น้ำ 334→352(180), ค้าง=0, ซ่อม=500, รวม=5205, paid=5205 ← จ่ายหมด
+  //   4/26: ไฟ 992→1059(335), น้ำ 352→370(180), ค้าง=0, รวม=4715, paid=4715  ← จ่ายหมด
+  //   5/26: ไฟ1059→1129(350), น้ำ 370→390(200), ค้าง=0, รวม=4750, paid=4750  ← จ่ายหมด
+  //   6/26: ไฟ1129→1199(350), น้ำ 390→408(180), ค้าง=0, อินเตอร์=200, รวม=4930, paid=0 ← จดแล้ว
+  //
+  // R15 (ค่าเช่า=3500, เฟอร์=0, ไฟ×5, น้ำ×10):
+  //   1/26: ไฟ 500→555(275),  น้ำ 200→217(170), ค้าง=0, รวม=3945, paid=3945  ← จ่ายหมด
+  //   2/26: ไฟ 555→615(300),  น้ำ 217→234(170), ค้าง=0, รวม=3970, paid=3970  ← จ่ายหมด
+  //   3/26: ไฟ 615→673(290),  น้ำ 234→251(170), ค้าง=0, รวม=3960, paid=3960  ← จ่ายหมด
+  //   4/26: ไฟ 673→733(300),  น้ำ 251→268(170), ค้าง=0, รวม=3970, paid=3970  ← จ่ายหมด
+  //   5/26: ไฟ 733→793(300),  น้ำ 268→286(180), ค้าง=0, รวม=3980, paid=0     ← ค้าง 3980
+  //   6/26: (ยังไม่จด → จะเห็น ค้างเดือนก่อน=3980, สถานะค้างจ่าย)
+  //
+  // R16 (ค่าเช่า=3000, เฟอร์=500, ไฟ×5, น้ำ×10):
+  //   1/26: ไฟ 300→338(190), น้ำ 150→163(130), ค้าง=0, รวม=3820, paid=3820  ← จ่ายหมด
+  //   2/26: ไฟ 338→377(195), น้ำ 163→176(130), ค้าง=0, รวม=3825, paid=3825  ← จ่ายหมด
+  //   3/26: ไฟ 377→415(190), น้ำ 176→189(130), ค้าง=0, รวม=3820, paid=3820  ← จ่ายหมด
+  //   4/26: ไฟ 415→456(205), น้ำ 189→203(140), ค้าง=0, รวม=3845, paid=3845  ← จ่ายหมด
+  //   5/26: ไฟ 456→496(200), น้ำ 203→218(150), ค้าง=0, รวม=3850, paid=3850  ← จ่ายหมด
+  //   6/26: (ยังไม่จด)
+  //
+  // RC1 (ค่าเช่า=5000, เฟอร์=1000, ไฟ×5, น้ำ×10):
+  //   1/26: ไฟ1500→1585(425), น้ำ 700→728(280), ค้าง=0, ทำสะอาด=300, รวม=7005, paid=7005 ← จ่ายหมด
+  //   2/26: ไฟ1585→1673(440), น้ำ 728→756(280), ค้าง=0, รวม=6720, paid=6720  ← จ่ายหมด
+  //   3/26: ไฟ1673→1763(450), น้ำ 756→786(300), ค้าง=0, รวม=6750, paid=6750  ← จ่ายหมด
+  //   4/26: ไฟ1763→1853(450), น้ำ 786→817(310), ค้าง=0, รวม=6760, paid=6760  ← จ่ายหมด
+  //   5/26: ไฟ1853→1945(460), น้ำ 817→848(310), ค้าง=0, รวม=6770, paid=6770  ← จ่ายหมด
+  //   6/26: (ยังไม่จด)
+  var allRecords = [
+    // ---- 1/2026 ----
+    { m:'1/2026', r:'C101', es:1000,ee:1042,eu:42, ea:210,  ws:500, we:517,wu:17, wa:170,  rent:3000,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3340, st:'จ่ายแล้ว' },
+    { m:'1/2026', r:'C201', es:800, ee:862, eu:62, ea:310,  ws:300, we:317,wu:17, wa:170,  rent:4000,fur:200, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:4680, st:'จ่ายแล้ว' },
+    { m:'1/2026', r:'R15',  es:500, ee:555, eu:55, ea:275,  ws:200, we:217,wu:17, wa:170,  rent:3500,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3945, st:'จ่ายแล้ว' },
+    { m:'1/2026', r:'R16',  es:300, ee:338, eu:38, ea:190,  ws:150, we:163,wu:13, wa:130,  rent:3000,fur:500, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3820, st:'จ่ายแล้ว' },
+    { m:'1/2026', r:'RC1',  es:1500,ee:1585,eu:85, ea:425,  ws:700, we:728,wu:28, wa:280,  rent:5000,fur:1000,prev:0,   fine:0,i1n:'ค่าทำความสะอาด',i1a:300,i2n:'',i2a:0, paid:7005, st:'จ่ายแล้ว' },
+    // ---- 2/2026 ----
+    { m:'2/2026', r:'C101', es:1042,ee:1085,eu:43, ea:215,  ws:517, we:530,wu:13, wa:130,  rent:3000,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3345, st:'จ่ายแล้ว' },
+    { m:'2/2026', r:'C201', es:862, ee:927, eu:65, ea:325,  ws:317, we:334,wu:17, wa:170,  rent:4000,fur:200, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:4695, st:'จ่ายแล้ว' },
+    { m:'2/2026', r:'R15',  es:555, ee:615, eu:60, ea:300,  ws:217, we:234,wu:17, wa:170,  rent:3500,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3970, st:'จ่ายแล้ว' },
+    { m:'2/2026', r:'R16',  es:338, ee:377, eu:39, ea:195,  ws:163, we:176,wu:13, wa:130,  rent:3000,fur:500, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3825, st:'จ่ายแล้ว' },
+    { m:'2/2026', r:'RC1',  es:1585,ee:1673,eu:88, ea:440,  ws:728, we:756,wu:28, wa:280,  rent:5000,fur:1000,prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:6720, st:'จ่ายแล้ว' },
+    // ---- 3/2026 ----
+    { m:'3/2026', r:'C101', es:1085,ee:1130,eu:45, ea:225,  ws:530, we:544,wu:14, wa:140,  rent:3000,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3000, st:'ค้าง'     },
+    { m:'3/2026', r:'C201', es:927, ee:992, eu:65, ea:325,  ws:334, we:352,wu:18, wa:180,  rent:4000,fur:200, prev:0,   fine:0,i1n:'ค่าซ่อมแอร์', i1a:500,i2n:'',i2a:0, paid:5205, st:'จ่ายแล้ว' },
+    { m:'3/2026', r:'R15',  es:615, ee:673, eu:58, ea:290,  ws:234, we:251,wu:17, wa:170,  rent:3500,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3960, st:'จ่ายแล้ว' },
+    { m:'3/2026', r:'R16',  es:377, ee:415, eu:38, ea:190,  ws:176, we:189,wu:13, wa:130,  rent:3000,fur:500, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3820, st:'จ่ายแล้ว' },
+    { m:'3/2026', r:'RC1',  es:1673,ee:1763,eu:90, ea:450,  ws:756, we:786,wu:30, wa:300,  rent:5000,fur:1000,prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:6750, st:'จ่ายแล้ว' },
+    // ---- 4/2026 — C101 มีค้างเดือนก่อน=365 (3365-3000) ----
+    { m:'4/2026', r:'C101', es:1130,ee:1175,eu:45, ea:225,  ws:544, we:559,wu:15, wa:150,  rent:3000,fur:0,   prev:365, fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3740, st:'จ่ายแล้ว' },
+    { m:'4/2026', r:'C201', es:992, ee:1059,eu:67, ea:335,  ws:352, we:370,wu:18, wa:180,  rent:4000,fur:200, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:4715, st:'จ่ายแล้ว' },
+    { m:'4/2026', r:'R15',  es:673, ee:733, eu:60, ea:300,  ws:251, we:268,wu:17, wa:170,  rent:3500,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3970, st:'จ่ายแล้ว' },
+    { m:'4/2026', r:'R16',  es:415, ee:456, eu:41, ea:205,  ws:189, we:203,wu:14, wa:140,  rent:3000,fur:500, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3845, st:'จ่ายแล้ว' },
+    { m:'4/2026', r:'RC1',  es:1763,ee:1853,eu:90, ea:450,  ws:786, we:817,wu:31, wa:310,  rent:5000,fur:1000,prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:6760, st:'จ่ายแล้ว' },
+    // ---- 5/2026 — C101 paid ไม่ครบ(ค้าง400), R15 ไม่ได้จ่าย(ค้าง3980) ----
+    { m:'5/2026', r:'C101', es:1175,ee:1225,eu:50, ea:250,  ws:559, we:574,wu:15, wa:150,  rent:3000,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3000, st:'ค้าง'     },
+    { m:'5/2026', r:'C201', es:1059,ee:1129,eu:70, ea:350,  ws:370, we:390,wu:20, wa:200,  rent:4000,fur:200, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:4750, st:'จ่ายแล้ว' },
+    { m:'5/2026', r:'R15',  es:733, ee:793, eu:60, ea:300,  ws:268, we:286,wu:18, wa:180,  rent:3500,fur:0,   prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:0,    st:'ค้าง'     },
+    { m:'5/2026', r:'R16',  es:456, ee:496, eu:40, ea:200,  ws:203, we:218,wu:15, wa:150,  rent:3000,fur:500, prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:3850, st:'จ่ายแล้ว' },
+    { m:'5/2026', r:'RC1',  es:1853,ee:1945,eu:92, ea:460,  ws:817, we:848,wu:31, wa:310,  rent:5000,fur:1000,prev:0,   fine:0,i1n:'',           i1a:0,  i2n:'',i2a:0, paid:6770, st:'จ่ายแล้ว' },
+    // ---- 6/2026 — C201 จดแล้ว (ค้างเดือนก่อน=0 เพราะ 5/2026 จ่ายหมด) ----
+    { m:'6/2026', r:'C201', es:1129,ee:1199,eu:70, ea:350,  ws:390, we:408,wu:18, wa:180,  rent:4000,fur:200, prev:0,   fine:0,i1n:'ค่าอินเตอร์เน็ต',i1a:200,i2n:'',i2a:0, paid:0, st:'ค้าง' }
+  ];
+
+  var now = new Date();
+  allRecords.forEach(function(rec) {
+    // ตรวจซ้ำก่อน insert
+    var data = recordSheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      var mv = data[i][0] instanceof Date
+        ? Utilities.formatDate(data[i][0], 'Asia/Bangkok', 'M/yyyy')
+        : String(data[i][0]);
+      if (mv === rec.m && data[i][1] === rec.r) {
+        Logger.log('ข้าม (มีอยู่แล้ว): ' + rec.r + ' ' + rec.m);
+        return;
+      }
+    }
+    recordSheet.appendRow([
+      rec.m, rec.r,
+      rec.es, rec.ee, rec.eu, rec.ea,
+      rec.ws, rec.we, rec.wu, rec.wa,
+      rec.rent, rec.fur,
+      rec.prev, rec.fine,
+      rec.i1n, rec.i1a, rec.i2n, rec.i2a,
+      '',          // col 19: รวม — formula set below
+      rec.paid, rec.st, now
+    ]);
+    var r = recordSheet.getLastRow();
+    recordSheet.getRange(r, 1).setNumberFormat('@').setValue(rec.m);
+    recordSheet.getRange(r, 19).setFormula(
+      '=F'+r+'+J'+r+'+K'+r+'+L'+r+'+M'+r+'+N'+r+'+P'+r+'+R'+r
+    );
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log('seedTestData() สำเร็จ — ' + allRecords.length + ' records (1–6/2026)');
+}
+
+// ลบข้อมูลทดสอบออก (รันก่อนส่งมอบงานจริง)
+function clearTestData() {
+  var ss            = SpreadsheetApp.getActiveSpreadsheet();
+  var settingsSheet = ss.getSheetByName('ตั้งค่า');
+  var recordSheet   = ss.getSheetByName('บันทึก');
+
+  var testRoomIds = ['C101', 'C201', 'C202', 'R15', 'R16', 'RC1'];
+  var testMonths  = ['1/2026','2/2026','3/2026','4/2026','5/2026','6/2026'];
+
+  // ล้างชื่อผู้เช่า/ค่าเช่า/มิเตอร์เริ่มต้นของห้องทดสอบ
+  var settingsData = settingsSheet.getRange('A6:F51').getValues();
+  settingsData.forEach(function(row, i) {
+    if (testRoomIds.indexOf(row[0]) === -1) return;
+    settingsSheet.getRange(i + 6, 2, 1, 5).setValues([['', 0, 0, 0, 0]]);
+  });
+
+  // ลบ rows ใน "บันทึก" ของห้องทดสอบ (วนจากล่างขึ้นบน)
+  var data = recordSheet.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    var mv = data[i][0] instanceof Date
+      ? Utilities.formatDate(data[i][0], 'Asia/Bangkok', 'M/yyyy')
+      : String(data[i][0]);
+    if (testMonths.indexOf(mv) !== -1 && testRoomIds.indexOf(data[i][1]) !== -1) {
+      recordSheet.deleteRow(i + 1);
+    }
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log('clearTestData() สำเร็จ — ข้อมูลทดสอบถูกลบแล้ว');
+}
+
+// ------------------------------------------------------------------ //
 
 function _getRoomList() {
   return [
