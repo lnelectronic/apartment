@@ -207,13 +207,19 @@
     /* ── Misc ── */
     @media (max-width: 600px) {
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .room-grid-hdr, .room-grid-row { grid-template-columns: 55px 1fr 80px auto; }
+      .room-grid-hdr { grid-template-columns: 55px 1fr 80px; }
+      .room-grid-row {
+        grid-template-columns: 55px 1fr 80px;
+        grid-template-rows: auto auto;
+      }
       .room-grid-hdr > :nth-child(4),
       .room-grid-row > :nth-child(4),
       .room-grid-hdr > :nth-child(5),
       .room-grid-row > :nth-child(5),
       .room-grid-hdr > :nth-child(6),
-      .room-grid-row > :nth-child(6) { display: none; }
+      .room-grid-row > :nth-child(6),
+      .room-grid-hdr > :nth-child(7) { display: none; }
+      .room-grid-row > :nth-child(7) { grid-column: 1 / -1; display: flex; }
     }
 
     /* ── Print ── */
