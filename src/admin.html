@@ -44,6 +44,8 @@
       white-space: nowrap; font-weight: 500;
     }
     .tab-btn.active { color: #0066cc; border-bottom-color: #0066cc; font-weight: 700; }
+    .tab-btn.tab-link { margin-left: auto; color: #27ae60; }
+    .tab-btn.tab-link:hover { color: #1e8449; border-bottom-color: #27ae60; }
 
     /* ── Content ── */
     .content { padding: 20px; max-width: 1100px; margin: 0 auto; }
@@ -138,13 +140,13 @@
 
     /* ── Rooms tab ── */
     .room-grid-hdr {
-      display: grid; grid-template-columns: 65px 1fr 90px 90px 155px;
+      display: grid; grid-template-columns: 60px 1fr 82px 82px 100px 100px 155px;
       gap: 8px; padding: 8px 4px;
       font-size: 0.8rem; font-weight: 700; color: #888;
       border-bottom: 2px solid #eee; margin-bottom: 4px;
     }
     .room-grid-row {
-      display: grid; grid-template-columns: 65px 1fr 90px 90px 155px;
+      display: grid; grid-template-columns: 60px 1fr 82px 82px 100px 100px 155px;
       gap: 8px; align-items: center; padding: 8px 4px;
       border-bottom: 1px solid #f0f0f0;
     }
@@ -180,6 +182,7 @@
     .bill-row:last-of-type { border-bottom: none; }
     .bill-row .blbl { color: #555; font-size: 0.95rem; }
     .bill-row .bval { font-weight: 500; white-space: nowrap; }
+    .bill-meter-sub { font-size: 0.78rem; color: #aaa; margin-top: 2px; }
     .bill-total {
       display: flex; justify-content: space-between; align-items: center;
       font-weight: 700; font-size: 1.1rem; color: #0066cc;
@@ -206,7 +209,11 @@
       .stat-grid { grid-template-columns: 1fr 1fr; }
       .room-grid-hdr, .room-grid-row { grid-template-columns: 55px 1fr 80px auto; }
       .room-grid-hdr > :nth-child(4),
-      .room-grid-row > :nth-child(4) { display: none; }
+      .room-grid-row > :nth-child(4),
+      .room-grid-hdr > :nth-child(5),
+      .room-grid-row > :nth-child(5),
+      .room-grid-hdr > :nth-child(6),
+      .room-grid-row > :nth-child(6) { display: none; }
     }
 
     /* ── Print ── */
@@ -256,6 +263,7 @@
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="billing">จัดการบิล</button>
     <button class="tab-btn" data-tab="rooms">จัดการห้อง</button>
+    <button class="tab-btn tab-link" onclick="window.open(window.location.href.replace(/\?.*$/,'')+'?page=staff','_blank')">อ่านมิเตอร์ ↗</button>
   </div>
 
   <!-- ─── Dashboard ─── -->
@@ -349,10 +357,10 @@
       </div>
       <div id="rooms-content" hidden>
         <div class="group-hdr">ตึก C (ชยางกูร)</div>
-        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อผู้เช่า</div><div>ค่าเช่า</div><div>เฟอร์นิเจอร์</div><div></div></div>
+        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
         <div id="rooms-c"></div>
         <div class="group-hdr">ตึก R (Runway)</div>
-        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อผู้เช่า</div><div>ค่าเช่า</div><div>เฟอร์นิเจอร์</div><div></div></div>
+        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
         <div id="rooms-r"></div>
       </div>
     </div>
@@ -721,8 +729,10 @@ function renderRoomRows(rooms, prefix) {
     return '<div class="room-grid-row" id="rdiv_' + id + '">'
       + '<div class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</div>'
       + '<div><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า"></div>'
-      + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:78px"></div>'
-      + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:78px"></div>'
+      + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:70px"></div>'
+      + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:70px"></div>'
+      + '<div><input class="num-input" type="number" id="relec_' + id + '" value="' + (r.elecInit || 0) + '" min="0" style="width:88px"></div>'
+      + '<div><input class="num-input" type="number" id="rwater_' + id + '" value="' + (r.waterInit || 0) + '" min="0" style="width:88px"></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
       + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button>'
       + (!isVacant ? '<button class="btn btn-danger btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
@@ -735,6 +745,8 @@ function saveRoomRow(roomId, id) {
   var name      = document.getElementById('rname_' + id).value.trim();
   var rent      = parseFloat(document.getElementById('rrent_' + id).value) || 0;
   var furniture = parseFloat(document.getElementById('rfurn_' + id).value) || 0;
+  var elecInit  = parseFloat(document.getElementById('relec_' + id).value) || 0;
+  var waterInit = parseFloat(document.getElementById('rwater_' + id).value) || 0;
 
   var btn = document.getElementById('rsave_' + id);
   btn.disabled = true;
@@ -748,7 +760,7 @@ function saveRoomRow(roomId, id) {
 
       if (S.allRooms) {
         var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
-        if (rec) { rec.name = name; rec.rent = rent; rec.furniture = furniture; }
+        if (rec) { rec.name = name; rec.rent = rent; rec.furniture = furniture; rec.elecInit = elecInit; rec.waterInit = waterInit; }
       }
       showMsg('rooms-msg', 'อัปเดตห้อง ' + roomId + ' สำเร็จ', 'success');
     })
@@ -757,7 +769,7 @@ function saveRoomRow(roomId, id) {
       btn.innerHTML = 'บันทึก';
       showMsg('rooms-msg', 'อัปเดตไม่สำเร็จ: ' + err.message, 'error');
     })
-    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture });
+    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture, elecInit: elecInit, waterInit: waterInit });
 }
 
 function startCheckOut(roomId, id) {
@@ -822,11 +834,16 @@ function showBill(rec) {
     + (rec.name ? ' · ' + escHtml(rec.name) : '')
     + '<br>เดือน ' + S.monthYear;
 
+  var elecStart = rec.elecStart || 0;
+  var elecEnd   = rec.elecEnd   || 0;
+  var waterStart = rec.waterStart || 0;
+  var waterEnd   = rec.waterEnd   || 0;
+
   var lines = [
-    { lbl: 'ค่าเช่า',              val: rec.rent      || 0 },
-    { lbl: 'ค่าเฟอร์นิเจอร์',     val: rec.furniture || 0 },
-    { lbl: 'ค่าไฟ (' + elecUsed  + ' หน่วย)', val: elecAmount  },
-    { lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย)', val: waterAmount }
+    { lbl: 'ค่าเช่า',          val: rec.rent      || 0 },
+    { lbl: 'ค่าเฟอร์นิเจอร์', val: rec.furniture || 0 },
+    { lbl: 'ค่าไฟ',  sub: elecStart  + ' → ' + elecEnd  + ' (' + elecUsed  + ' หน่วย)', val: elecAmount  },
+    { lbl: 'ค่าน้ำ', sub: waterStart + ' → ' + waterEnd + ' (' + waterUsed + ' หน่วย)', val: waterAmount }
   ];
   if (item1Amount) lines.push({ lbl: escHtml(rec.item1Name || 'รายการอื่น 1'), val: item1Amount });
   if (item2Amount) lines.push({ lbl: escHtml(rec.item2Name || 'รายการอื่น 2'), val: item2Amount });
@@ -835,18 +852,14 @@ function showBill(rec) {
 
   var html = lines.map(function(l) {
     return '<div class="bill-row">'
-      + '<span class="blbl">' + l.lbl + '</span>'
+      + '<div><span class="blbl">' + l.lbl + '</span>'
+      + (l.sub ? '<div class="bill-meter-sub">' + l.sub + '</div>' : '')
+      + '</div>'
       + '<span class="bval"' + (l.color ? ' style="color:' + l.color + '"' : '') + '>' + fmtB(l.val) + '</span>'
       + '</div>';
   }).join('');
 
   html += '<div class="bill-total"><span>รวมทั้งหมด</span><span>' + fmtB(total) + '</span></div>';
-  html += '<div class="bill-row"><span class="blbl">จ่ายจริง</span><span class="bval">' + fmtB(paid) + '</span></div>';
-
-  var remaining = total - paid;
-  if (remaining > 0 && status !== 'จ่ายแล้ว') {
-    html += '<div class="bill-row"><span class="blbl" style="color:#e74c3c">ยังค้าง</span><span class="bval" style="color:#e74c3c">' + fmtB(remaining) + '</span></div>';
-  }
 
   html += '<div class="bill-status-box ' + (status === 'จ่ายแล้ว' ? 'paid' : 'unpaid') + '">' + (status === 'จ่ายแล้ว' ? 'จ่ายแล้ว' : 'รอจ่าย') + '</div>';
 
