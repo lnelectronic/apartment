@@ -23,7 +23,6 @@ function setupSheets() {
 
   SpreadsheetApp.flush();
   Logger.log('Setup สำเร็จ! ห้องทั้งหมด ' + _getRoomList().length + ' ห้อง พร้อมใช้งาน');
-  SpreadsheetApp.getUi().alert('Setup สำเร็จ!\nห้องทั้งหมด ' + _getRoomList().length + ' ห้อง พร้อมใช้งานแล้ว');
 }
 
 // ------------------------------------------------------------------ //
