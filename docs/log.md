@@ -6,6 +6,19 @@
 
 ## 2026-06-28
 
+### fix: NaN dashboard + สีการ์ด (DataService.gs, admin.html)
+**ปัญหา**: "ยอดที่ควรเก็บ" และ "ค้างรวม" แสดง NaN บาท และการ์ด "ยอดที่ควรเก็บ" ไม่แดง
+
+**สาเหตุ**: col M (ค้างเดือนก่อน) ใช้ Sheets formula `=IFERROR(SUMPRODUCT(...*$S:$S)...)` แต่ col S (รวม) มีสูตร `=...+M{r}+...` → **Circular Reference** Sheets คืน error object → Apps Script `getValues()` ได้ `{}` → JavaScript `0 + {} = "0[object Object]"` → `Number(...)` → NaN
+
+**แก้ไข**:
+- `saveRecord`: เปลี่ยนจาก `setFormula(prevBalanceFormula)` → `setValue(prevBalance)` โดยคำนวณ `max(0, prevTotal - prevPaid)` ใน Apps Script ก่อนเขียน Sheet (ตัด circular ref)
+- เพิ่ม `_getNextMonth()` helper
+- `updatePayment`: หลัง update payment ให้หาแถวเดือนถัดไป แล้ว refresh col 13 (prevBalance) ด้วย — รักษา dynamic behavior
+- `admin.html`: "ยอดที่ควรเก็บ" ใช้ `color: totalPending > 0 ? 'red' : 'green'` (แดงเมื่อยังค้าง, เขียวเมื่อเก็บครบ)
+
+---
+
 ### feat: ห้องว่าง + ย้ายออก (DataService.gs, admin.html)
 
 **ฟีเจอร์ที่เพิ่ม**:
@@ -18,7 +31,7 @@
 
 **นิยาม "ห้องว่าง"**: `ชื่อผู้เช่า === ""` ใน Sheet "ตั้งค่า" (derive ณ query time ไม่ใช่ field แยก)
 
-**Commit**: (pending)
+**Commit**: `e1def17`
 
 ---
 

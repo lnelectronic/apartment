@@ -275,7 +275,7 @@
     </div>
 
     <div id="missing-section" class="card" style="display:none">
-      <div class="card-title">ห้องที่ยังไม่กรอกมิเตอร์</div>
+      <div class="card-title">รอการอ่านมิเตอร์</div>
       <div id="missing-list"></div>
     </div>
 
@@ -320,9 +320,9 @@
               <tr>
                 <th>ห้อง</th><th>ผู้เช่า</th>
                 <th style="text-align:right">รวม</th>
-                <th style="text-align:right">ค่าปรับ</th>
-                <th style="text-align:right">จ่ายจริง</th>
-                <th>สถานะ</th>
+                <th style="text-align:center">ค่าปรับ</th>
+                <th style="text-align:center">จ่ายจริง</th>
+                <th style="text-align:center">สถานะ</th>
                 <th></th><th></th>
               </tr>
             </thead>
@@ -552,9 +552,9 @@ function renderDashboard(data) {
     { lbl: 'ว่าง',           val: data.vacantRooms   || 0, color: 'orange', big: true },
     { lbl: 'จ่ายแล้ว',       val: paidCount,               color: 'green',  big: true },
     { lbl: 'ยังไม่จ่าย',     val: unpaidCount,             color: 'red',    big: true },
-    { lbl: 'ยอดที่ควรเก็บ', val: fmtB(data.totalAmount),  color: 'blue' },
+    { lbl: 'ยอดที่ควรเก็บ', val: fmtB(data.totalAmount),  color: data.totalPending > 0 ? 'red' : 'green' },
     { lbl: 'เก็บได้จริง',   val: fmtB(data.totalPaid),    color: 'green' },
-    { lbl: 'ค้างรวม',        val: fmtB(data.totalPending), color: 'red' }
+    { lbl: 'ค้างชำระ',       val: fmtB(data.totalPending), color: 'red' }
   ];
 
   document.getElementById('stat-grid').innerHTML = stats.map(function(s) {
@@ -587,7 +587,7 @@ function renderMissingRooms(missing) {
   if (!missing || missing.length === 0) return;
   document.getElementById('missing-list').innerHTML =
     '<div class="alert warning">'
-    + 'ยังไม่กรอกมิเตอร์ <strong>' + missing.length + ' ห้อง</strong>: '
+    + 'ยังไม่อ่านมิเตอร์ <strong>' + missing.length + ' ห้อง</strong>: '
     + missing.join(', ')
     + '</div>';
   document.getElementById('missing-section').style.display = 'block';
@@ -624,9 +624,9 @@ function renderBillingFromData(rooms) {
       + '<td><strong>' + r.roomId + '</strong></td>'
       + '<td>' + (r.name || '—') + '</td>'
       + '<td style="text-align:right" id="btotal_' + i + '">' + fmt(r.total) + '</td>'
-      + '<td><input class="num-input" type="number" id="bfine_' + i + '" value="' + (r.fine || 0) + '" min="0"></td>'
-      + '<td><input class="num-input" type="number" id="bpaid_' + i + '" value="' + (r.paid || 0) + '" min="0"></td>'
-      + '<td><span class="badge ' + (r.status === 'จ่ายแล้ว' ? 'badge-paid' : 'badge-unpaid') + '" id="bstatus_' + i + '">' + (r.status || 'ค้าง') + '</span></td>'
+      + '<td style="text-align:center"><input class="num-input" type="number" id="bfine_' + i + '" value="' + (r.fine || 0) + '" min="0"></td>'
+      + '<td style="text-align:center"><input class="num-input" type="number" id="bpaid_' + i + '" value="' + (r.paid || 0) + '" min="0"></td>'
+      + '<td style="text-align:center"><span class="badge ' + (r.status === 'จ่ายแล้ว' ? 'badge-paid' : 'badge-unpaid') + '" id="bstatus_' + i + '">' + (r.status === 'จ่ายแล้ว' ? 'จ่ายแล้ว' : 'รอจ่าย') + '</span></td>'
       + '<td><button class="btn btn-success btn-sm" id="bsave_' + i + '" onclick="saveBillingRow(' + i + ')">บันทึก</button></td>'
       + '<td><button class="btn btn-outline btn-sm" onclick="showBillByKey(\'b\',' + i + ')">ดูบิล</button></td>'
       + '</tr>';
@@ -658,7 +658,7 @@ function saveBillingRow(i) {
           var newStatus = paid >= estTotal ? 'จ่ายแล้ว' : 'ค้าง';
 
           var badge = document.getElementById('bstatus_' + i);
-          badge.textContent = newStatus;
+          badge.textContent = newStatus === 'จ่ายแล้ว' ? 'จ่ายแล้ว' : 'รอจ่าย';
           badge.className   = 'badge ' + (newStatus === 'จ่ายแล้ว' ? 'badge-paid' : 'badge-unpaid');
 
           rec.fine   = fine;
@@ -666,6 +666,7 @@ function saveBillingRow(i) {
           rec.status = newStatus;
 
           showMsg('billing-msg', 'บันทึกห้อง ' + roomId + ' สำเร็จ', 'success');
+          loadDashboard();
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
@@ -847,7 +848,7 @@ function showBill(rec) {
     html += '<div class="bill-row"><span class="blbl" style="color:#e74c3c">ยังค้าง</span><span class="bval" style="color:#e74c3c">' + fmtB(remaining) + '</span></div>';
   }
 
-  html += '<div class="bill-status-box ' + (status === 'จ่ายแล้ว' ? 'paid' : 'unpaid') + '">' + status + '</div>';
+  html += '<div class="bill-status-box ' + (status === 'จ่ายแล้ว' ? 'paid' : 'unpaid') + '">' + (status === 'จ่ายแล้ว' ? 'จ่ายแล้ว' : 'รอจ่าย') + '</div>';
 
   document.getElementById('bill-body').innerHTML = html;
   document.getElementById('modal-bill').hidden = false;

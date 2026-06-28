@@ -20,6 +20,14 @@ function _getPrevMonth(monthYear) {
   return (m - 1) + '/' + y;
 }
 
+function _getNextMonth(monthYear) {
+  var parts = monthYear.split('/');
+  var m = parseInt(parts[0]);
+  var y = parseInt(parts[1]);
+  if (m === 12) return '1/' + (y + 1);
+  return (m + 1) + '/' + y;
+}
+
 function _toMonthYear(val) {
   if (val instanceof Date) {
     return Utilities.formatDate(val, 'Asia/Bangkok', 'M/yyyy');
@@ -117,13 +125,17 @@ function saveRecord(data) {
   var item1Amount = data.item1Amount || 0;
   var item2Amount = data.item2Amount || 0;
 
-  var prevMonth          = _getPrevMonth(data.monthYear);
-  var prevBalanceFormula = '=IFERROR('
-    + 'SUMPRODUCT(($A:$A="' + prevMonth + '")*($B:$B="' + data.roomId + '")*$S:$S)'
-    + '-SUMPRODUCT(($A:$A="' + prevMonth + '")*($B:$B="' + data.roomId + '")*$T:$T)'
-    + ',0)';
+  var prevMonth = _getPrevMonth(data.monthYear);
+  // คำนวณค้างเดือนก่อนเป็นตัวเลข — Sheets formula ทำให้เกิด circular ref กับ col S (total)
+  var prevBalance = 0;
+  var prevRow = _findRecordRow(data.roomId, prevMonth);
+  if (prevRow) {
+    var prevTotal = Number(prevRow.data[18]) || 0;
+    var prevPaid  = Number(prevRow.data[19]) || 0;
+    prevBalance = Math.max(0, prevTotal - prevPaid);
+  }
 
-  var sheet   = _getRecordSheet();
+  var sheet    = _getRecordSheet();
   var existing = _findRecordRow(data.roomId, data.monthYear);
 
   var now = new Date();
@@ -137,8 +149,8 @@ function saveRecord(data) {
       data.waterStart, data.waterEnd, waterUsed, waterAmount,
       room.rent, room.furniture
     ]]);
-    // col 13: formula ค้างเดือนก่อน (ไม่แตะ col 14 ค่าปรับ)
-    sheet.getRange(r, 13).setFormula(prevBalanceFormula);
+    // col 13: ค้างเดือนก่อน (static value — formula จะเกิด circular ref กับ col S)
+    sheet.getRange(r, 13).setValue(prevBalance);
     // cols 15-18: รายการอื่นๆ
     sheet.getRange(r, 15, 1, 4).setValues([[
       data.item1Name || '', item1Amount, data.item2Name || '', item2Amount
@@ -154,7 +166,7 @@ function saveRecord(data) {
       data.elecStart, data.elecEnd, elecUsed, elecAmount,
       data.waterStart, data.waterEnd, waterUsed, waterAmount,
       room.rent, room.furniture,
-      '',          // col 13: ค้างเดือนก่อน — formula set ด้านล่าง
+      prevBalance, // col 13: ค้างเดือนก่อน
       0,           // col 14: ค่าปรับ
       data.item1Name || '', item1Amount,
       data.item2Name || '', item2Amount,
@@ -167,7 +179,6 @@ function saveRecord(data) {
     // appendRow ไม่ inherit column format และ auto-convert "6/2026" → Date serial
     // ต้อง setNumberFormat('@') ก่อน แล้ว setValue ทับเพื่อบังคับเก็บเป็น string
     sheet.getRange(r, 1).setNumberFormat('@').setValue(data.monthYear);
-    sheet.getRange(r, 13).setFormula(prevBalanceFormula);
     sheet.getRange(r, 19).setFormula('=F'+r+'+J'+r+'+K'+r+'+L'+r+'+M'+r+'+N'+r+'+P'+r+'+R'+r);
   }
 
@@ -183,6 +194,15 @@ function updatePayment(roomId, monthYear, paidAmount) {
   var status = paidAmount >= total ? 'จ่ายแล้ว' : 'ค้าง';
   sheet.getRange(r, 20).setValue(paidAmount);
   sheet.getRange(r, 21).setValue(status);
+
+  // อัปเดต prevBalance ของเดือนถัดไป (ถ้ามีข้อมูลอยู่แล้ว)
+  var nextMonth = _getNextMonth(monthYear);
+  var nextRow = _findRecordRow(roomId, nextMonth);
+  if (nextRow) {
+    var newPrevBalance = Math.max(0, (Number(total) || 0) - paidAmount);
+    sheet.getRange(nextRow.row, 13).setValue(newPrevBalance);
+  }
+
   SpreadsheetApp.flush();
 }
 
