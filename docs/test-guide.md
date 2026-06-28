@@ -87,9 +87,24 @@ URL: `[Web App URL]?page=admin`
 
 ---
 
-## รหัสผ่านแอดมิน (สำหรับทดสอบ)
+## ตั้งรหัสผ่านแอดมิน (Script Properties)
 
-> *(กรอก ADMIN_PASSWORD ที่ตั้งไว้ใน Script Properties)*
+เปิด Apps Script Editor → **Project Settings** (ไอคอนฟันเฟือง) → **Script Properties** → Add property
+
+### แอดมินคนเดียว
+| Key | Value |
+|-----|-------|
+| `ADMIN_PASSWORD` | `1234` |
+
+### แอดมินหลายคน (แนะนำ)
+| Key | Value |
+|-----|-------|
+| `ADMIN_PASSWORDS` | `["1234","5678"]` |
+
+> **สำคัญ:** ถ้าใช้ `ADMIN_PASSWORDS` ต้องเป็น JSON array จริงๆ รวมถึง `[`, `"`, และ `]`
+> ถ้าใส่ผิด format ระบบจะแสดง error message บอก — ไม่ใช่แค่บอกว่ารหัสผ่านผิด
+
+ถ้ามีทั้งสอง key → `ADMIN_PASSWORDS` จะถูกใช้ก่อนเสมอ
 
 ---
 

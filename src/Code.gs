@@ -9,14 +9,18 @@ function doGet(e) {
 }
 
 // เรียกจาก admin.html: google.script.run.checkPassword(pw)
-// ADMIN_PASSWORDS = JSON array เช่น ["pass1","pass2"] — ตรงกับรายการใดก็ผ่าน
+// Script Properties: ADMIN_PASSWORDS = JSON array เช่น ["pass1","pass2"]
+// fallback: ADMIN_PASSWORD = "pass1" (key เดิม, ผู้ดูแลคนเดียว)
 function checkPassword(pw) {
   var props = PropertiesService.getScriptProperties();
-  var list = props.getProperty('ADMIN_PASSWORDS');
+  var list  = props.getProperty('ADMIN_PASSWORDS');
   if (list) {
-    try { return JSON.parse(list).indexOf(pw) !== -1; } catch (e) {}
+    var parsed;
+    try { parsed = JSON.parse(list); } catch (e) {
+      throw new Error('ADMIN_PASSWORDS ใน Script Properties ต้องเป็น JSON array เช่น ["1234","5678"] — ค่าปัจจุบัน: ' + list);
+    }
+    return Array.isArray(parsed) && parsed.indexOf(pw) !== -1;
   }
-  // fallback: key เดิม
   return pw === props.getProperty('ADMIN_PASSWORD');
 }
 
