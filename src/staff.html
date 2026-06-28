@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จดมิเตอร์ห้องพัก</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 480px;
+      margin: 0 auto 16px;
+    }
+
+    /* ─── Room banner ─── */
+    .room-banner {
+      background: #e8f4fd;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .room-banner .room-id   { font-size: 1.3rem; font-weight: 600; color: #0066cc; }
+    .room-banner .room-name { font-size: 1rem; color: #333; margin-top: 2px; }
+    .room-banner .bal       { font-size: 0.95rem; margin-top: 6px; font-weight: 500; }
+    .room-banner .bal.owed  { color: #c0392b; }
+    .room-banner .bal.clear { color: #27ae60; }
+
+    /* ─── Form elements ─── */
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 14px 12px;
+      font-size: 1.1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #0066cc;
+    }
+
+    input[readonly] {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    .field       { margin-bottom: 16px; }
+    .field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+    .btn:active   { opacity: 0.8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #0066cc; color: white; }
+    .btn-success  { background: #27ae60; color: white; }
+    .btn-danger   { background: #e74c3c; color: white; }
+    .btn-ghost    { background: #eee;    color: #333;  }
+
+    /* ─── Messages ─── */
+    .msg {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .msg.error   { background: #fde8e8; color: #c0392b; display: block; }
+    .msg.success { background: #e8fdf0; color: #27ae60; display: block; }
+    .msg.info    { background: #e8f4fd; color: #0066cc; display: block; }
+
+    /* ─── Section labels ─── */
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+
+    /* ─── Summary ─── */
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 1rem;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row.total {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #0066cc;
+      padding-top: 12px;
+    }
+    .summary-row .lbl { color: #555; }
+    .summary-row .val { font-weight: 500; white-space: nowrap; }
+
+    .month-badge {
+      display: inline-block;
+      background: #0066cc;
+      color: white;
+      font-size: 0.85rem;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    /* ─── Success ─── */
+    .success-circle {
+      width: 64px; height: 64px;
+      background: #27ae60;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: white;
+      margin: 0 auto 16px;
+    }
+    .text-center { text-align: center; }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.35);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     SECTION 1: ค้นหาห้อง
+════════════════════════════════════════ -->
+<div id="sect-search">
+  <div class="card">
+    <h1>จดมิเตอร์ห้องพัก</h1>
+    <div class="field">
+      <label for="input-room">เลขห้อง</label>
+      <input id="input-room" type="text"
+             placeholder="เช่น C201, R15"
+             autocomplete="off"
+             autocapitalize="characters"
+             style="text-transform:uppercase">
+    </div>
+    <button class="btn btn-primary" id="btn-search">ค้นหา</button>
+    <div id="msg-search" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 2: มีข้อมูลเดือนนี้แล้ว
+════════════════════════════════════════ -->
+<div id="sect-existing" hidden>
+  <div class="card">
+    <div id="existing-banner" class="room-banner"></div>
+    <div id="existing-msg" class="msg info" style="display:block"></div>
+    <button class="btn btn-danger"  id="btn-edit"   style="margin-top:16px">แก้ไขทับ</button>
+    <button class="btn btn-ghost"   id="btn-cancel">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 3: ฟอร์มจดมิเตอร์
+════════════════════════════════════════ -->
+<div id="sect-form" hidden>
+  <div class="card">
+    <div id="form-banner" class="room-banner"></div>
+
+    <p class="section-label">มิเตอร์ไฟฟ้า</p>
+    <div class="field-row">
+      <div>
+        <label>เริ่ม (หน่วย)</label>
+        <input id="elec-start" type="number" readonly>
+      </div>
+      <div>
+        <label>ถึง (หน่วย)</label>
+        <input id="elec-end" type="number" placeholder="กรอก" min="0">
+      </div>
+    </div>
+
+    <p class="section-label">มิเตอร์น้ำประปา</p>
+    <div class="field-row">
+      <div>
+        <label>เริ่ม (หน่วย)</label>
+        <input id="water-start" type="number" readonly>
+      </div>
+      <div>
+        <label>ถึง (หน่วย)</label>
+        <input id="water-end" type="number" placeholder="กรอก" min="0">
+      </div>
+    </div>
+
+    <hr class="divider">
+    <p class="section-label">รายการอื่นๆ (ไม่บังคับ)</p>
+
+    <div class="field-row">
+      <div>
+        <label>รายการที่ 1</label>
+        <input id="item1-name" type="text" placeholder="ชื่อรายการ">
+      </div>
+      <div>
+        <label>จำนวน (บาท)</label>
+        <input id="item1-amount" type="number" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label>รายการที่ 2</label>
+        <input id="item2-name" type="text" placeholder="ชื่อรายการ">
+      </div>
+      <div>
+        <label>จำนวน (บาท)</label>
+        <input id="item2-amount" type="number" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-calc" style="margin-top:8px">คำนวณ</button>
+    <div id="msg-form" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 4: ยอดรวมก่อนบันทึก
+════════════════════════════════════════ -->
+<div id="sect-preview" hidden>
+  <div class="card">
+    <h2>ยอดรวมประมาณการ</h2>
+    <p style="font-size:0.9rem;color:#888;margin-bottom:16px">
+      เดือน <span id="preview-month" class="month-badge"></span>
+      &nbsp;· ห้อง <span id="preview-room" style="font-weight:600"></span>
+    </p>
+    <div id="summary-rows"></div>
+    <button class="btn btn-success" id="btn-save"      style="margin-top:20px">บันทึก</button>
+    <button class="btn btn-ghost"   id="btn-back-form" style="margin-top:8px">แก้ไข</button>
+    <div id="msg-save" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 5: บันทึกสำเร็จ
+════════════════════════════════════════ -->
+<div id="sect-success" hidden>
+  <div class="card text-center">
+    <div class="success-circle">&#10003;</div>
+    <h2>บันทึกสำเร็จ!</h2>
+    <p style="color:#555;margin:8px 0 24px">
+      บันทึกข้อมูลห้อง <strong id="success-room"></strong> เรียบร้อยแล้ว
+    </p>
+    <button class="btn btn-primary" id="btn-new">จดห้องถัดไป</button>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────
+// State
+// ──────────────────────────────────────────
+var S = {
+  roomId:      '',
+  monthYear:   '',
+  room:        null,
+  rates:       null,
+  existing:    null,
+  prevMeter:   null,
+  prevBalance: 0,
+  saveData:    null
+};
+
+function currentMonthYear() {
+  var d = new Date();
+  return (d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('th-TH');
+}
+
+// ──────────────────────────────────────────
+// Navigation
+// ──────────────────────────────────────────
+var SECTIONS = ['sect-search','sect-existing','sect-form','sect-preview','sect-success'];
+
+function showOnly(id) {
+  SECTIONS.forEach(function(s) {
+    document.getElementById(s).hidden = (s !== id);
+  });
+}
+
+// ──────────────────────────────────────────
+// Room banner
+// ──────────────────────────────────────────
+function bannerHtml(room, prevBalance) {
+  var bal;
+  if (prevBalance > 0) {
+    bal = '<div class="bal owed">ค้างเดือนก่อน: ' + fmt(prevBalance) + ' บาท</div>';
+  } else if (prevBalance < 0) {
+    bal = '<div class="bal clear">เครดิตเดือนก่อน: ' + fmt(-prevBalance) + ' บาท</div>';
+  } else {
+    bal = '<div class="bal clear">ไม่มียอดค้าง</div>';
+  }
+  return '<div class="room-id">ห้อง ' + room.roomId + '</div>'
+       + '<div class="room-name">' + (room.name || '—') + '</div>'
+       + bal;
+}
+
+// ──────────────────────────────────────────
+// SECTION 1: ค้นหา
+// ──────────────────────────────────────────
+document.getElementById('input-room').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('btn-search').click();
+});
+
+document.getElementById('btn-search').addEventListener('click', function() {
+  var roomId = document.getElementById('input-room').value.trim().toUpperCase();
+  if (!roomId) { showMsg('msg-search', 'กรุณากรอกเลขห้อง', 'error'); return; }
+
+  S.roomId    = roomId;
+  S.monthYear = currentMonthYear();
+
+  setLoading('btn-search', true, 'กำลังค้นหา...');
+  clearMsg('msg-search');
+
+  google.script.run
+    .withSuccessHandler(onRoomLoaded)
+    .withFailureHandler(function(err) {
+      setLoading('btn-search', false, 'ค้นหา');
+      showMsg('msg-search', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getRoomForStaff(roomId, S.monthYear);
+});
+
+function onRoomLoaded(res) {
+  setLoading('btn-search', false, 'ค้นหา');
+
+  if (!res.found) {
+    showMsg('msg-search', 'ไม่พบห้องนี้ กรุณาติดต่อแอดมิน', 'error');
+    return;
+  }
+
+  S.room        = res.room;
+  S.rates       = res.rates;
+  S.existing    = res.existing;
+  S.prevMeter   = res.prevMeter;
+  S.prevBalance = res.prevBalance;
+
+  if (res.existing) {
+    document.getElementById('existing-banner').innerHTML = bannerHtml(res.room, res.prevBalance);
+    document.getElementById('existing-msg').textContent  =
+      'ห้องนี้มีข้อมูลเดือน ' + S.monthYear + ' แล้ว ต้องการแก้ไขหรือไม่?';
+    showOnly('sect-existing');
+  } else {
+    loadForm(false);
+  }
+}
+
+// ──────────────────────────────────────────
+// SECTION 2: มีข้อมูลแล้ว
+// ──────────────────────────────────────────
+document.getElementById('btn-edit').addEventListener('click', function() {
+  loadForm(true);
+});
+
+document.getElementById('btn-cancel').addEventListener('click', function() {
+  showOnly('sect-search');
+  clearMsg('msg-search');
+});
+
+// ──────────────────────────────────────────
+// SECTION 3: ฟอร์มจดมิเตอร์
+// ──────────────────────────────────────────
+function loadForm(isEdit) {
+  var pm = S.prevMeter;
+  var ex = S.existing;
+
+  var elecStart, waterStart;
+  if (isEdit && ex) {
+    elecStart  = ex.elecStart;
+    waterStart = ex.waterStart;
+  } else {
+    elecStart  = (pm && pm.elecEnd  != null) ? pm.elecEnd  : 0;
+    waterStart = (pm && pm.waterEnd != null) ? pm.waterEnd : 0;
+  }
+
+  document.getElementById('elec-start').value   = elecStart;
+  document.getElementById('water-start').value  = waterStart;
+  document.getElementById('elec-end').value     = (isEdit && ex && ex.elecEnd)     ? ex.elecEnd     : '';
+  document.getElementById('water-end').value    = (isEdit && ex && ex.waterEnd)    ? ex.waterEnd    : '';
+  document.getElementById('item1-name').value   = (isEdit && ex) ? (ex.item1Name   || '') : '';
+  document.getElementById('item1-amount').value = (isEdit && ex && ex.item1Amount) ? ex.item1Amount : '';
+  document.getElementById('item2-name').value   = (isEdit && ex) ? (ex.item2Name   || '') : '';
+  document.getElementById('item2-amount').value = (isEdit && ex && ex.item2Amount) ? ex.item2Amount : '';
+
+  document.getElementById('form-banner').innerHTML = bannerHtml(S.room, S.prevBalance);
+  clearMsg('msg-form');
+  showOnly('sect-form');
+  setTimeout(function() { document.getElementById('elec-end').focus(); }, 80);
+}
+
+document.getElementById('btn-calc').addEventListener('click', function() {
+  var elecStart  = parseFloat(document.getElementById('elec-start').value)  || 0;
+  var waterStart = parseFloat(document.getElementById('water-start').value) || 0;
+  var elecEnd    = parseFloat(document.getElementById('elec-end').value);
+  var waterEnd   = parseFloat(document.getElementById('water-end').value);
+
+  if (isNaN(elecEnd)  || elecEnd < 0) {
+    showMsg('msg-form', 'กรุณากรอกมิเตอร์ไฟ "ถึง" ให้ถูกต้อง', 'error'); return;
+  }
+  if (isNaN(waterEnd) || waterEnd < 0) {
+    showMsg('msg-form', 'กรุณากรอกมิเตอร์น้ำ "ถึง" ให้ถูกต้อง', 'error'); return;
+  }
+  if (elecEnd < elecStart) {
+    showMsg('msg-form', 'มิเตอร์ไฟ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + elecStart + ')', 'error'); return;
+  }
+  if (waterEnd < waterStart) {
+    showMsg('msg-form', 'มิเตอร์น้ำ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + waterStart + ')', 'error'); return;
+  }
+
+  var item1Name   = document.getElementById('item1-name').value.trim();
+  var item1Amount = parseFloat(document.getElementById('item1-amount').value) || 0;
+  var item2Name   = document.getElementById('item2-name').value.trim();
+  var item2Amount = parseFloat(document.getElementById('item2-amount').value) || 0;
+
+  var elecUsed    = elecEnd   - elecStart;
+  var waterUsed   = waterEnd  - waterStart;
+  var elecAmount  = elecUsed  * S.rates.electricity;
+  var waterAmount = waterUsed * S.rates.water;
+  var total = S.room.rent + S.room.furniture
+            + elecAmount + waterAmount
+            + S.prevBalance
+            + item1Amount + item2Amount;
+
+  // Build summary table
+  var rows = [
+    { lbl: 'ค่าเช่า',         val: S.room.rent },
+    { lbl: 'ค่าเฟอร์นิเจอร์', val: S.room.furniture },
+    { lbl: 'ค่าไฟ (' + elecUsed  + ' หน่วย × ' + S.rates.electricity + ')', val: elecAmount  },
+    { lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย × ' + S.rates.water + ')',       val: waterAmount }
+  ];
+  if (S.prevBalance !== 0) rows.push({ lbl: 'ค้างเดือนก่อน', val: S.prevBalance });
+  if (item1Amount)         rows.push({ lbl: item1Name || 'รายการที่ 1', val: item1Amount });
+  if (item2Amount)         rows.push({ lbl: item2Name || 'รายการที่ 2', val: item2Amount });
+
+  var html = rows.map(function(r) {
+    return '<div class="summary-row">'
+         + '<span class="lbl">' + r.lbl + '</span>'
+         + '<span class="val">' + fmt(r.val) + ' บาท</span>'
+         + '</div>';
+  }).join('');
+  html += '<div class="summary-row total">'
+        + '<span class="lbl">รวมทั้งหมด</span>'
+        + '<span class="val">' + fmt(total) + ' บาท</span>'
+        + '</div>';
+
+  document.getElementById('summary-rows').innerHTML = html;
+  document.getElementById('preview-month').textContent = S.monthYear;
+  document.getElementById('preview-room').textContent  = S.roomId;
+
+  S.saveData = {
+    monthYear:   S.monthYear,
+    roomId:      S.roomId,
+    elecStart:   elecStart,
+    elecEnd:     elecEnd,
+    waterStart:  waterStart,
+    waterEnd:    waterEnd,
+    item1Name:   item1Name,
+    item1Amount: item1Amount,
+    item2Name:   item2Name,
+    item2Amount: item2Amount
+  };
+
+  clearMsg('msg-save');
+  showOnly('sect-preview');
+});
+
+// ──────────────────────────────────────────
+// SECTION 4: Preview
+// ──────────────────────────────────────────
+document.getElementById('btn-back-form').addEventListener('click', function() {
+  showOnly('sect-form');
+});
+
+document.getElementById('btn-save').addEventListener('click', function() {
+  setLoading('btn-save', true, 'กำลังบันทึก...');
+  clearMsg('msg-save');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      setLoading('btn-save', false, 'บันทึก');
+      document.getElementById('success-room').textContent = S.roomId;
+      showOnly('sect-success');
+    })
+    .withFailureHandler(function(err) {
+      setLoading('btn-save', false, 'บันทึก');
+      showMsg('msg-save', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .saveRecord(S.saveData);
+});
+
+// ──────────────────────────────────────────
+// SECTION 5: Success
+// ──────────────────────────────────────────
+document.getElementById('btn-new').addEventListener('click', function() {
+  document.getElementById('input-room').value = '';
+  clearMsg('msg-search');
+  showOnly('sect-search');
+  document.getElementById('input-room').focus();
+});
+
+// ──────────────────────────────────────────
+// Utilities
+// ──────────────────────────────────────────
+function showMsg(id, text, type) {
+  var el = document.getElementById(id);
+  el.textContent = text;
+  el.className   = 'msg ' + type;
+}
+
+function clearMsg(id) {
+  var el = document.getElementById(id);
+  el.textContent = '';
+  el.className   = 'msg';
+}
+
+function setLoading(btnId, loading, label) {
+  var btn = document.getElementById(btnId);
+  btn.disabled  = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span>' + label : label;
+}
+</script>
+</body>
+</html>
