@@ -42,25 +42,30 @@ function _setupSettingsSheet(sheet, ss) {
   // row 4 ว่าง (spacer)
 
   // ส่วนที่ 2: รายชื่อห้อง (row 5 = header, row 6+ = data)
-  sheet.getRange('A5:D5').setValues([['เลขห้อง', 'ชื่อผู้เช่า', 'ค่าเช่า (บาท)', 'ค่าเฟอร์นิเจอร์ (บาท)']]);
+  sheet.getRange('A5:F5').setValues([[
+    'เลขห้อง', 'ชื่อผู้เช่า', 'ค่าเช่า (บาท)', 'ค่าเฟอร์นิเจอร์ (บาท)',
+    'ไฟ-เริ่มต้น (หน่วย)', 'น้ำ-เริ่มต้น (หน่วย)'
+  ]]);
 
   var rooms = _getRoomList();
   var roomData = rooms.map(function(roomId, i) {
     var rent = (i % 2 === 0) ? 2000 : 5000; // ค่าทดสอบ — แอดมินแก้ได้
-    return [roomId, '', rent, 0];
+    return [roomId, '', rent, 0, 0, 0];
   });
-  sheet.getRange(6, 1, roomData.length, 4).setValues(roomData);
+  sheet.getRange(6, 1, roomData.length, 6).setValues(roomData);
 
   // Formatting
   var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
   sheet.getRange('A1:C1').setTextStyle(headerStyle).setBackground('#4a86e8').setFontColor('#ffffff');
-  sheet.getRange('A5:D5').setTextStyle(headerStyle).setBackground('#6aa84f').setFontColor('#ffffff');
-  sheet.getRange('A1:D1').setHorizontalAlignment('center');
-  sheet.getRange('A5:D5').setHorizontalAlignment('center');
+  sheet.getRange('A5:F5').setTextStyle(headerStyle).setBackground('#6aa84f').setFontColor('#ffffff');
+  sheet.getRange('A1:F1').setHorizontalAlignment('center');
+  sheet.getRange('A5:F5').setHorizontalAlignment('center');
   sheet.setColumnWidth(1, 100);
   sheet.setColumnWidth(2, 180);
   sheet.setColumnWidth(3, 140);
   sheet.setColumnWidth(4, 160);
+  sheet.setColumnWidth(5, 150);
+  sheet.setColumnWidth(6, 150);
   sheet.setFrozenRows(0);
 
   // DataService.gs ใช้ hardcoded range แทน named range เพื่อความเรียบง่าย
@@ -91,7 +96,8 @@ function _setupRecordSheet(sheet) {
     'รายการอื่น-2 จำนวน',  // col 18 R
     'รวม',             // col 19 S
     'จ่ายจริง',        // col 20 T
-    'สถานะ'            // col 21 U
+    'สถานะ',           // col 21 U
+    'วันที่จด'         // col 22 V
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -118,6 +124,7 @@ function _setupRecordSheet(sheet) {
   sheet.setColumnWidth(19, 90);
   sheet.setColumnWidth(20, 90);
   sheet.setColumnWidth(21, 90);
+  sheet.setColumnWidth(22, 140);
 }
 
 // ------------------------------------------------------------------ //

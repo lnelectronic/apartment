@@ -1,9 +1,9 @@
 // Code.gs — doGet routing + client-callable entry points
 
 function doGet(e) {
-  var page     = (e && e.parameter && e.parameter.page) || 'staff';
-  var template = HtmlService.createTemplateFromFile(page === 'admin' ? 'admin' : 'staff');
-  return template.evaluate()
+  var page = (e && e.parameter && e.parameter.page) || 'staff';
+  var file = (page === 'admin') ? 'admin' : (page === 'meter') ? 'meter' : 'staff';
+  return HtmlService.createTemplateFromFile(file).evaluate()
     .setTitle('App-Room')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -12,6 +12,32 @@ function doGet(e) {
 function checkPassword(pw) {
   var stored = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
   return pw === stored;
+}
+
+// เรียกจาก meter.html: ตรวจสอบห้องและดึงมิเตอร์เริ่มต้น ไม่ส่งข้อมูลการเงิน
+function getRoomForMeter(roomId, monthYear) {
+  var room = getRoom(roomId);
+  if (!room) return { found: false };
+
+  var existing = getRecordThisMonth(roomId, monthYear);
+  if (existing) return { found: true, blocked: true };
+
+  var prevMeter = getPrevMeter(roomId, monthYear);
+
+  var prevBalance = 0;
+  var prevRecord  = _findRecordRow(roomId, _getPrevMonth(monthYear));
+  if (prevRecord) {
+    prevBalance = (prevRecord.data[18] || 0) - (prevRecord.data[19] || 0);
+  }
+
+  return {
+    found:      true,
+    blocked:    false,
+    name:       room.name,
+    status:     prevBalance > 0 ? 'ค้างจ่าย' : 'ปกติ',
+    elecStart:  prevMeter ? prevMeter.elecEnd  : 0,
+    waterStart: prevMeter ? prevMeter.waterEnd : 0
+  };
 }
 
 // เรียกจาก staff.html: ดึงข้อมูลทุกอย่างที่ต้องใช้ในครั้งเดียว

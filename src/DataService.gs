@@ -36,10 +36,17 @@ function _findRecordRow(roomId, monthYear) {
 // ------------------------------------------------------------------ //
 
 function getRoom(roomId) {
-  var data = _getSettingsSheet().getRange('A6:D51').getValues();
+  var data = _getSettingsSheet().getRange('A6:F51').getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] === roomId) {
-      return { roomId: data[i][0], name: data[i][1], rent: data[i][2], furniture: data[i][3] };
+      return {
+        roomId:    data[i][0],
+        name:      data[i][1],
+        rent:      data[i][2],
+        furniture: data[i][3],
+        elecInit:  data[i][4] || 0,
+        waterInit: data[i][5] || 0
+      };
     }
   }
   return null;
@@ -58,11 +65,18 @@ function getRates(building) {
 function getPrevMeter(roomId, monthYear) {
   var prevMonth = _getPrevMonth(monthYear);
   var found = _findRecordRow(roomId, prevMonth);
-  if (!found) return null;
-  return {
-    elecEnd:  found.data[3],  // col 4: ไฟ-ถึง
-    waterEnd: found.data[7]   // col 8: น้ำ-ถึง
-  };
+  if (found) {
+    return {
+      elecEnd:  found.data[3],  // col 4: ไฟ-ถึง
+      waterEnd: found.data[7]   // col 8: น้ำ-ถึง
+    };
+  }
+  // fallback: ใช้ค่าเริ่มต้นที่แอดมินกรอกไว้ใน "ตั้งค่า"
+  var room = getRoom(roomId);
+  if (room) {
+    return { elecEnd: room.elecInit, waterEnd: room.waterInit };
+  }
+  return null;
 }
 
 function getRecordThisMonth(roomId, monthYear) {
@@ -105,6 +119,8 @@ function saveRecord(data) {
   var sheet   = _getRecordSheet();
   var existing = _findRecordRow(data.roomId, data.monthYear);
 
+  var now = new Date();
+
   if (existing) {
     var r = existing.row;
     // cols 1-12: ข้อมูลที่คำนวณใหม่
@@ -120,9 +136,11 @@ function saveRecord(data) {
     sheet.getRange(r, 15, 1, 4).setValues([[
       data.item1Name || '', item1Amount, data.item2Name || '', item2Amount
     ]]);
-    // col 19: รวม formula (ค้างเดือนก่อน อาจเปลี่ยน → recalc อัตโนมัติผ่าน formula)
+    // col 19: รวม formula
     sheet.getRange(r, 19).setFormula('=F'+r+'+J'+r+'+K'+r+'+L'+r+'+M'+r+'+N'+r+'+P'+r+'+R'+r);
     // cols 20-21 (จ่ายจริง, สถานะ): ไม่แตะ
+    // col 22: timestamp อัปเดตทุกครั้งที่แก้ไข
+    sheet.getRange(r, 22).setValue(now);
   } else {
     sheet.appendRow([
       data.monthYear, data.roomId,
@@ -135,7 +153,8 @@ function saveRecord(data) {
       data.item2Name || '', item2Amount,
       '',          // col 19: รวม — formula set ด้านล่าง
       0,           // col 20: จ่ายจริง
-      'ค้าง'       // col 21: สถานะ
+      'ค้าง',      // col 21: สถานะ
+      now          // col 22: วันที่จด
     ]);
     var r = sheet.getLastRow();
     sheet.getRange(r, 13).setFormula(prevBalanceFormula);

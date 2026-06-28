@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จดมิเตอร์</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 480px;
+      margin: 0 auto 16px;
+    }
+
+    /* ─── Room info ─── */
+    .room-banner {
+      background: #f0f7ee;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .room-banner .left .room-id   { font-size: 1.3rem; font-weight: 600; color: #1a7a1a; }
+    .room-banner .left .room-name { font-size: 1rem; color: #333; margin-top: 2px; }
+    .status-badge {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .status-badge.ok   { background: #e8fdf0; color: #27ae60; }
+    .status-badge.owed { background: #fde8e8; color: #c0392b; }
+
+    /* ─── Form ─── */
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 14px 12px;
+      font-size: 1.1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    input:focus      { outline: none; border-color: #27ae60; }
+    input[readonly]  { background: #f5f5f5; color: #666; }
+
+    .field     { margin-bottom: 16px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+    .btn:active   { opacity: 0.8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #27ae60; color: white; }
+    .btn-ghost    { background: #eee;    color: #333;  }
+
+    /* ─── Messages ─── */
+    .msg {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .msg.error   { background: #fde8e8; color: #c0392b; display: block; }
+    .msg.success { background: #e8fdf0; color: #27ae60; display: block; }
+
+    /* ─── Success ─── */
+    .success-circle {
+      width: 64px; height: 64px;
+      background: #27ae60;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: white;
+      margin: 0 auto 16px;
+    }
+    .text-center { text-align: center; }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.35);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ════════ SECTION 1: ค้นหา ════════ -->
+<div id="sect-search">
+  <div class="card">
+    <h1>จดมิเตอร์</h1>
+    <div class="field">
+      <label for="input-room">เลขห้อง</label>
+      <input id="input-room" type="text"
+             placeholder="เช่น C201, R15"
+             autocomplete="off"
+             autocapitalize="characters"
+             style="text-transform:uppercase">
+    </div>
+    <button class="btn btn-primary" id="btn-search">ค้นหา</button>
+    <div id="msg-search" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════ SECTION 2: ฟอร์มจดมิเตอร์ ════════ -->
+<div id="sect-form" hidden>
+  <div class="card">
+    <div id="room-banner" class="room-banner">
+      <div class="left">
+        <div class="room-id" id="banner-room-id"></div>
+        <div class="room-name" id="banner-room-name"></div>
+      </div>
+      <div class="status-badge" id="banner-status"></div>
+    </div>
+
+    <p class="section-label">มิเตอร์ไฟฟ้า</p>
+    <div class="field-row">
+      <div>
+        <label>เริ่ม (หน่วย)</label>
+        <input id="elec-start" type="number" readonly>
+      </div>
+      <div>
+        <label>ถึง (หน่วย)</label>
+        <input id="elec-end" type="number" placeholder="กรอก" min="0">
+      </div>
+    </div>
+
+    <p class="section-label">มิเตอร์น้ำประปา</p>
+    <div class="field-row">
+      <div>
+        <label>เริ่ม (หน่วย)</label>
+        <input id="water-start" type="number" readonly>
+      </div>
+      <div>
+        <label>ถึง (หน่วย)</label>
+        <input id="water-end" type="number" placeholder="กรอก" min="0">
+      </div>
+    </div>
+
+    <hr class="divider">
+    <p class="section-label">รายการอื่นๆ (ไม่บังคับ)</p>
+
+    <div class="field-row">
+      <div>
+        <label>รายการที่ 1</label>
+        <input id="item1-name" type="text" placeholder="ชื่อรายการ">
+      </div>
+      <div>
+        <label>จำนวน (บาท)</label>
+        <input id="item1-amount" type="number" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label>รายการที่ 2</label>
+        <input id="item2-name" type="text" placeholder="ชื่อรายการ">
+      </div>
+      <div>
+        <label>จำนวน (บาท)</label>
+        <input id="item2-amount" type="number" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-save" style="margin-top:8px">บันทึก</button>
+    <button class="btn btn-ghost"   id="btn-cancel">ยกเลิก</button>
+    <div id="msg-form" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════ SECTION 3: บันทึกสำเร็จ ════════ -->
+<div id="sect-success" hidden>
+  <div class="card text-center">
+    <div class="success-circle">&#10003;</div>
+    <h1 style="margin-bottom:8px">บันทึกสำเร็จ!</h1>
+    <p style="color:#555;margin-bottom:24px">ห้อง <strong id="success-room"></strong> เรียบร้อยแล้ว</p>
+    <button class="btn btn-primary" id="btn-new">จดห้องถัดไป</button>
+  </div>
+</div>
+
+<script>
+var S = {
+  roomId:     '',
+  monthYear:  '',
+  elecStart:  0,
+  waterStart: 0
+};
+
+function currentMonthYear() {
+  var d = new Date();
+  return (d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
+var SECTIONS = ['sect-search', 'sect-form', 'sect-success'];
+function showOnly(id) {
+  SECTIONS.forEach(function(s) {
+    document.getElementById(s).hidden = (s !== id);
+  });
+}
+
+// ── Search ──
+document.getElementById('input-room').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('btn-search').click();
+});
+
+document.getElementById('btn-search').addEventListener('click', function() {
+  var roomId = document.getElementById('input-room').value.trim().toUpperCase();
+  if (!roomId) { showMsg('msg-search', 'กรุณากรอกเลขห้อง', 'error'); return; }
+
+  S.roomId    = roomId;
+  S.monthYear = currentMonthYear();
+
+  setLoading('btn-search', true, 'กำลังค้นหา...');
+  clearMsg('msg-search');
+
+  google.script.run
+    .withSuccessHandler(onRoomLoaded)
+    .withFailureHandler(function(err) {
+      setLoading('btn-search', false, 'ค้นหา');
+      showMsg('msg-search', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getRoomForMeter(roomId, S.monthYear);
+});
+
+function onRoomLoaded(res) {
+  setLoading('btn-search', false, 'ค้นหา');
+
+  if (!res.found) {
+    showMsg('msg-search', 'ไม่พบห้องนี้ กรุณาติดต่อแอดมิน', 'error');
+    return;
+  }
+
+  if (res.blocked) {
+    showMsg('msg-search', 'ห้อง ' + S.roomId + ' จดมิเตอร์เดือนนี้แล้ว ติดต่อแอดมินเพื่อแก้ไข', 'error');
+    return;
+  }
+
+  S.elecStart  = res.elecStart;
+  S.waterStart = res.waterStart;
+
+  // Room banner
+  document.getElementById('banner-room-id').textContent = 'ห้อง ' + S.roomId;
+  document.getElementById('banner-room-name').textContent = res.name || '—';
+  var badge = document.getElementById('banner-status');
+  if (res.status === 'ค้างจ่าย') {
+    badge.textContent  = 'ค้างจ่าย';
+    badge.className    = 'status-badge owed';
+  } else {
+    badge.textContent  = 'ปกติ';
+    badge.className    = 'status-badge ok';
+  }
+
+  document.getElementById('elec-start').value  = S.elecStart;
+  document.getElementById('water-start').value = S.waterStart;
+  document.getElementById('elec-end').value    = '';
+  document.getElementById('water-end').value   = '';
+  document.getElementById('item1-name').value  = '';
+  document.getElementById('item1-amount').value= '';
+  document.getElementById('item2-name').value  = '';
+  document.getElementById('item2-amount').value= '';
+
+  clearMsg('msg-form');
+  showOnly('sect-form');
+  setTimeout(function() { document.getElementById('elec-end').focus(); }, 80);
+}
+
+// ── Cancel ──
+document.getElementById('btn-cancel').addEventListener('click', function() {
+  showOnly('sect-search');
+  clearMsg('msg-search');
+});
+
+// ── Save ──
+document.getElementById('btn-save').addEventListener('click', function() {
+  var elecEnd   = parseFloat(document.getElementById('elec-end').value);
+  var waterEnd  = parseFloat(document.getElementById('water-end').value);
+
+  if (isNaN(elecEnd)  || elecEnd < 0) {
+    showMsg('msg-form', 'กรุณากรอกมิเตอร์ไฟ "ถึง" ให้ถูกต้อง', 'error'); return;
+  }
+  if (isNaN(waterEnd) || waterEnd < 0) {
+    showMsg('msg-form', 'กรุณากรอกมิเตอร์น้ำ "ถึง" ให้ถูกต้อง', 'error'); return;
+  }
+  if (elecEnd < S.elecStart) {
+    showMsg('msg-form', 'มิเตอร์ไฟ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + S.elecStart + ')', 'error'); return;
+  }
+  if (waterEnd < S.waterStart) {
+    showMsg('msg-form', 'มิเตอร์น้ำ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + S.waterStart + ')', 'error'); return;
+  }
+
+  var payload = {
+    monthYear:   S.monthYear,
+    roomId:      S.roomId,
+    elecStart:   S.elecStart,
+    elecEnd:     elecEnd,
+    waterStart:  S.waterStart,
+    waterEnd:    waterEnd,
+    item1Name:   document.getElementById('item1-name').value.trim(),
+    item1Amount: parseFloat(document.getElementById('item1-amount').value) || 0,
+    item2Name:   document.getElementById('item2-name').value.trim(),
+    item2Amount: parseFloat(document.getElementById('item2-amount').value) || 0
+  };
+
+  setLoading('btn-save', true, 'กำลังบันทึก...');
+  clearMsg('msg-form');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      setLoading('btn-save', false, 'บันทึก');
+      document.getElementById('success-room').textContent = S.roomId;
+      showOnly('sect-success');
+    })
+    .withFailureHandler(function(err) {
+      setLoading('btn-save', false, 'บันทึก');
+      showMsg('msg-form', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .saveRecord(payload);
+});
+
+// ── New room ──
+document.getElementById('btn-new').addEventListener('click', function() {
+  document.getElementById('input-room').value = '';
+  clearMsg('msg-search');
+  showOnly('sect-search');
+  document.getElementById('input-room').focus();
+});
+
+// ── Utilities ──
+function showMsg(id, text, type) {
+  var el = document.getElementById(id);
+  el.textContent = text;
+  el.className   = 'msg ' + type;
+}
+function clearMsg(id) {
+  var el = document.getElementById(id);
+  el.textContent = '';
+  el.className   = 'msg';
+}
+function setLoading(btnId, loading, label) {
+  var btn = document.getElementById(btnId);
+  btn.disabled  = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span>' + label : label;
+}
+</script>
+</body>
+</html>
