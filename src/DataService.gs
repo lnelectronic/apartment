@@ -194,10 +194,17 @@ function updateFine(roomId, monthYear, fineAmount) {
 }
 
 function getDashboardData(monthYear) {
-  var allData = _getRecordSheet().getDataRange().getValues();
-  var nameMap = {};
-  _getSettingsSheet().getRange('A6:D51').getValues().forEach(function(r) {
-    if (r[0]) nameMap[r[0]] = r[1];
+  var allData      = _getRecordSheet().getDataRange().getValues();
+  var settingsData = _getSettingsSheet().getRange('A6:D51').getValues();
+
+  var nameMap       = {};
+  var totalRooms    = 0;
+  var occupiedRooms = 0;
+  settingsData.forEach(function(r) {
+    if (!r[0]) return;
+    totalRooms++;
+    nameMap[r[0]] = r[1];
+    if (r[1]) occupiedRooms++;
   });
 
   var rooms        = [];
@@ -227,12 +234,14 @@ function getDashboardData(monthYear) {
   }
 
   return {
-    monthYear:    monthYear,
-    totalRooms:   rooms.length,
-    totalAmount:  totalAmount,
-    totalPaid:    totalPaid,
-    totalPending: totalPending,
-    rooms:        rooms
+    monthYear:     monthYear,
+    totalRooms:    totalRooms,
+    occupiedRooms: occupiedRooms,
+    vacantRooms:   totalRooms - occupiedRooms,
+    totalAmount:   totalAmount,
+    totalPaid:     totalPaid,
+    totalPending:  totalPending,
+    rooms:         rooms
   };
 }
 
@@ -240,9 +249,39 @@ function getMissingRooms(monthYear) {
   var allData  = _getRecordSheet().getDataRange().getValues();
   var recorded = {};
   for (var i = 1; i < allData.length; i++) {
-    if (allData[i][0] === monthYear) recorded[allData[i][1]] = true;
+    if (_toMonthYear(allData[i][0]) === monthYear) recorded[allData[i][1]] = true;
   }
-  return _getRoomList().filter(function(r) { return !recorded[r]; });
+  // เฉพาะห้องที่มีผู้เช่าอยู่ปัจจุบัน (ชื่อไม่ว่าง)
+  var occupied = _getSettingsSheet().getRange('A6:B51').getValues()
+    .filter(function(r) { return r[0] && r[1]; })
+    .map(function(r) { return r[0]; });
+  return occupied.filter(function(r) { return !recorded[r]; });
+}
+
+function getOutstandingBalance(roomId) {
+  var allData = _getRecordSheet().getDataRange().getValues();
+  var outstanding = 0;
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][1] !== roomId) continue;
+    if (allData[i][20] === 'จ่ายแล้ว') continue;
+    outstanding += Math.max(0, (allData[i][18] || 0) - (allData[i][19] || 0));
+  }
+  return { outstanding: outstanding };
+}
+
+function checkOutRoom(roomId) {
+  var sheet = _getSettingsSheet();
+  var data  = sheet.getRange('A6:D51').getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] !== roomId) continue;
+    var r = i + 6;
+    sheet.getRange(r, 2).setValue('');
+    sheet.getRange(r, 3).setValue(0);
+    sheet.getRange(r, 4).setValue(0);
+    SpreadsheetApp.flush();
+    return { success: true };
+  }
+  throw new Error('ไม่พบห้อง ' + roomId);
 }
 
 function getAllRoomsInfo() {

@@ -138,15 +138,20 @@
 
     /* ── Rooms tab ── */
     .room-grid-hdr {
-      display: grid; grid-template-columns: 65px 1fr 90px 90px 72px;
+      display: grid; grid-template-columns: 65px 1fr 90px 90px 155px;
       gap: 8px; padding: 8px 4px;
       font-size: 0.8rem; font-weight: 700; color: #888;
       border-bottom: 2px solid #eee; margin-bottom: 4px;
     }
     .room-grid-row {
-      display: grid; grid-template-columns: 65px 1fr 90px 90px 72px;
+      display: grid; grid-template-columns: 65px 1fr 90px 90px 155px;
       gap: 8px; align-items: center; padding: 8px 4px;
       border-bottom: 1px solid #f0f0f0;
+    }
+    .badge-vacant {
+      background: #fff3e0; color: #e67e22;
+      font-size: 0.7rem; padding: 1px 6px; border-radius: 10px;
+      font-weight: 600; vertical-align: middle; margin-left: 4px;
     }
     .room-grid-row:last-child { border-bottom: none; }
     .room-id-lbl { font-weight: 700; font-size: 0.95rem; color: #0066cc; }
@@ -199,7 +204,7 @@
     /* ── Misc ── */
     @media (max-width: 600px) {
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .room-grid-hdr, .room-grid-row { grid-template-columns: 55px 1fr 80px 72px; }
+      .room-grid-hdr, .room-grid-row { grid-template-columns: 55px 1fr 80px auto; }
       .room-grid-hdr > :nth-child(4),
       .room-grid-row > :nth-child(4) { display: none; }
     }
@@ -542,12 +547,14 @@ function renderDashboard(data) {
   var unpaidCount = rooms.length - paidCount;
 
   var stats = [
-    { lbl: 'ห้องที่มีข้อมูล', val: rooms.length, color: 'blue', big: true },
-    { lbl: 'จ่ายแล้ว',         val: paidCount,    color: 'green', big: true },
-    { lbl: 'ยังไม่จ่าย',       val: unpaidCount,  color: 'red',  big: true },
-    { lbl: 'ยอดที่ควรเก็บ',   val: fmtB(data.totalAmount),  color: 'blue' },
-    { lbl: 'เก็บได้จริง',     val: fmtB(data.totalPaid),    color: 'green' },
-    { lbl: 'ค้างรวม',          val: fmtB(data.totalPending), color: 'red' }
+    { lbl: 'ห้องทั้งหมด',   val: data.totalRooms    || 0, color: 'blue',   big: true },
+    { lbl: 'มีผู้เช่า',     val: data.occupiedRooms || 0, color: 'blue',   big: true },
+    { lbl: 'ว่าง',           val: data.vacantRooms   || 0, color: 'orange', big: true },
+    { lbl: 'จ่ายแล้ว',       val: paidCount,               color: 'green',  big: true },
+    { lbl: 'ยังไม่จ่าย',     val: unpaidCount,             color: 'red',    big: true },
+    { lbl: 'ยอดที่ควรเก็บ', val: fmtB(data.totalAmount),  color: 'blue' },
+    { lbl: 'เก็บได้จริง',   val: fmtB(data.totalPaid),    color: 'green' },
+    { lbl: 'ค้างรวม',        val: fmtB(data.totalPending), color: 'red' }
   ];
 
   document.getElementById('stat-grid').innerHTML = stats.map(function(s) {
@@ -709,12 +716,16 @@ function renderRoomRows(rooms, prefix) {
   if (!rooms.length) return '<p style="color:#aaa;padding:8px 4px;font-size:0.9rem">ไม่มีห้อง</p>';
   return rooms.map(function(r, i) {
     var id = prefix + i;
+    var isVacant = !r.name;
     return '<div class="room-grid-row" id="rdiv_' + id + '">'
-      + '<div class="room-id-lbl">' + r.roomId + '</div>'
+      + '<div class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</div>'
       + '<div><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า"></div>'
       + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:78px"></div>'
       + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:78px"></div>'
-      + '<div><button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button></div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
+      + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button>'
+      + (!isVacant ? '<button class="btn btn-danger btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
+      + '</div>'
       + '</div>';
   }).join('');
 }
@@ -746,6 +757,42 @@ function saveRoomRow(roomId, id) {
       showMsg('rooms-msg', 'อัปเดตไม่สำเร็จ: ' + err.message, 'error');
     })
     .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture });
+}
+
+function startCheckOut(roomId, id) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var msg = 'ยืนยันย้ายออก ห้อง ' + roomId + '?\nชื่อผู้เช่า, ค่าเช่า และค่าเฟอร์นิเจอร์จะถูกล้าง';
+      if (result.outstanding > 0) {
+        msg = 'ห้อง ' + roomId + ' มียอดค้าง ' + fmt(result.outstanding) + ' บาท\n\n' + msg;
+      }
+      if (!confirm(msg)) return;
+      doCheckOut(roomId, id);
+    })
+    .withFailureHandler(function(err) {
+      showMsg('rooms-msg', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getOutstandingBalance(roomId);
+}
+
+function doCheckOut(roomId, id) {
+  var btn = document.getElementById('rout_' + id);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  google.script.run
+    .withSuccessHandler(function() {
+      if (S.allRooms) {
+        var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
+        if (rec) { rec.name = ''; rec.rent = 0; rec.furniture = 0; }
+      }
+      renderRoomsTab(S.allRooms);
+      showMsg('rooms-msg', 'ห้อง ' + roomId + ' ย้ายออกเรียบร้อย', 'success');
+    })
+    .withFailureHandler(function(err) {
+      if (btn) { btn.disabled = false; btn.innerHTML = 'ย้ายออก'; }
+      showMsg('rooms-msg', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .checkOutRoom(roomId);
 }
 
 // ──────────────────────────────────────────
