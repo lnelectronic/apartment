@@ -418,10 +418,13 @@ function currentMonthYear() {
 function fmt(n)      { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtB(n)     { return fmt(n) + ' บาท'; }
 
+var _staffUrl = '';
+google.script.url.getLocation(function(loc) {
+  _staffUrl = loc.href.replace(/\?.*$/, '') + '?page=staff';
+});
+
 function openStaffPage() {
-  google.script.url.getLocation(function(loc) {
-    window.open(loc.href.replace(/\?.*$/, '') + '?page=staff', '_blank');
-  });
+  if (_staffUrl) window.open(_staffUrl, '_blank');
 }
 
 // ──────────────────────────────────────────
