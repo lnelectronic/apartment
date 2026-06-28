@@ -20,11 +20,18 @@ function _getPrevMonth(monthYear) {
   return (m - 1) + '/' + y;
 }
 
+function _toMonthYear(val) {
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, 'Asia/Bangkok', 'M/yyyy');
+  }
+  return String(val);
+}
+
 function _findRecordRow(roomId, monthYear) {
   var sheet = _getRecordSheet();
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === monthYear && data[i][1] === roomId) {
+    if (_toMonthYear(data[i][0]) === monthYear && data[i][1] === roomId) {
       return { row: i + 1, data: data[i] };
     }
   }
@@ -157,6 +164,9 @@ function saveRecord(data) {
       now          // col 22: วันที่จด
     ]);
     var r = sheet.getLastRow();
+    // appendRow ไม่ inherit column format และ auto-convert "6/2026" → Date serial
+    // ต้อง setNumberFormat('@') ก่อน แล้ว setValue ทับเพื่อบังคับเก็บเป็น string
+    sheet.getRange(r, 1).setNumberFormat('@').setValue(data.monthYear);
     sheet.getRange(r, 13).setFormula(prevBalanceFormula);
     sheet.getRange(r, 19).setFormula('=F'+r+'+J'+r+'+K'+r+'+L'+r+'+M'+r+'+N'+r+'+P'+r+'+R'+r);
   }
@@ -197,7 +207,7 @@ function getDashboardData(monthYear) {
 
   for (var i = 1; i < allData.length; i++) {
     var d = allData[i];
-    if (d[0] !== monthYear) continue;
+    if (_toMonthYear(d[0]) !== monthYear) continue;
     var rec = {
       roomId:      d[1],
       name:        nameMap[d[1]] || '',
@@ -257,4 +267,37 @@ function updateRoomInfo(roomId, info) {
     return;
   }
   throw new Error('ไม่พบห้อง ' + roomId + ' ใน ตั้งค่า');
+}
+
+// รันจาก Apps Script editor เพื่อแปลง Column A ที่เป็น Date → string ทุก row
+// ทำครั้งเดียวเพื่อแก้ข้อมูลเก่าที่บันทึกก่อน fix
+function fixRecordSheetDates() {
+  var sheet = _getRecordSheet();
+  var data  = sheet.getDataRange().getValues();
+  var fixed = 0;
+  for (var i = 1; i < data.length; i++) {
+    var cell = data[i][0];
+    if (cell instanceof Date) {
+      var str = Utilities.formatDate(cell, 'Asia/Bangkok', 'M/yyyy');
+      sheet.getRange(i + 1, 1).setNumberFormat('@').setValue(str);
+      fixed++;
+      Logger.log('fixed row ' + (i + 1) + ': ' + cell + ' → ' + str);
+    }
+  }
+  SpreadsheetApp.flush();
+  Logger.log('Done. Fixed ' + fixed + ' rows.');
+}
+
+// รันจาก Apps Script editor เพื่อ diagnose ปัญหา duplicate row
+function debugRecordSheet() {
+  var sheet = _getRecordSheet();
+  var data = sheet.getDataRange().getValues();
+  Logger.log('Total rows (incl header): ' + data.length);
+  for (var i = 0; i < Math.min(data.length, 6); i++) {
+    var cell = data[i][0];
+    Logger.log('row ' + (i+1) + ' | col-A type=' + typeof cell
+      + ' isDate=' + (cell instanceof Date)
+      + ' value=' + cell
+      + ' | col-B=' + data[i][1]);
+  }
 }
