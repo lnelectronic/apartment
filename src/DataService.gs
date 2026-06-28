@@ -201,14 +201,11 @@ function getDashboardData(monthYear) {
     var rec = {
       roomId:      d[1],
       name:        nameMap[d[1]] || '',
-      elecStart:   d[2],  elecEnd:     d[3],
-      waterStart:  d[6],  waterEnd:    d[7],
-      rent:        d[10], furniture:   d[11],
-      prevBalance: d[12], fine:        d[13],
-      item1Name:   d[14], item1Amount: d[15],
-      item2Name:   d[16], item2Amount: d[17],
-      total:       d[18], paid:        d[19],
-      status:      d[20]
+      elecStart:   d[2],  elecEnd:     d[3],  elecUsed:    d[4],  elecAmount:  d[5],
+      waterStart:  d[6],  waterEnd:    d[7],  waterUsed:   d[8],  waterAmount: d[9],
+      rent:        d[10], furniture:   d[11], prevBalance: d[12], fine:        d[13],
+      item1Name:   d[14], item1Amount: d[15], item2Name:   d[16], item2Amount: d[17],
+      total:       d[18], paid:        d[19], status:      d[20]
     };
     rooms.push(rec);
     totalAmount += rec.total  || 0;
@@ -236,6 +233,15 @@ function getMissingRooms(monthYear) {
     if (allData[i][0] === monthYear) recorded[allData[i][1]] = true;
   }
   return _getRoomList().filter(function(r) { return !recorded[r]; });
+}
+
+function getAllRoomsInfo() {
+  var data = _getSettingsSheet().getRange('A6:D51').getValues();
+  return data
+    .filter(function(r) { return r[0] !== ''; })
+    .map(function(r) {
+      return { roomId: r[0], name: r[1], rent: r[2], furniture: r[3] };
+    });
 }
 
 function updateRoomInfo(roomId, info) {

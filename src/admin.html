@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin · App-Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f0f4f8; min-height: 100vh; color: #1a1a2e; }
+
+    /* ── Login ── */
+    #sect-login {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .login-card {
+      background: white; border-radius: 16px; padding: 32px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12); width: 100%; max-width: 360px;
+      text-align: center;
+    }
+    .login-card h1 { font-size: 1.5rem; margin-bottom: 6px; }
+    .login-card p  { color: #888; margin-bottom: 24px; font-size: 0.95rem; }
+
+    /* ── Top bar ── */
+    #topbar {
+      background: #1a1a2e; color: white; padding: 13px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 200;
+    }
+    #topbar h1 { font-size: 1.1rem; font-weight: 600; }
+
+    /* ── Tabs ── */
+    .tabs {
+      background: white; border-bottom: 2px solid #e8e8e8;
+      display: flex; padding: 0 20px; overflow-x: auto;
+      position: sticky; top: 49px; z-index: 100;
+    }
+    .tab-btn {
+      padding: 14px 22px; font-family: inherit; font-size: 1rem;
+      border: none; background: none; cursor: pointer; color: #666;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      white-space: nowrap; font-weight: 500;
+    }
+    .tab-btn.active { color: #0066cc; border-bottom-color: #0066cc; font-weight: 700; }
+
+    /* ── Content ── */
+    .content { padding: 20px; max-width: 1100px; margin: 0 auto; }
+
+    /* ── Cards ── */
+    .card {
+      background: white; border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 14px; }
+
+    /* ── Stat grid ── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-left: 4px solid #e0e0e0;
+    }
+    .stat-card .stat-lbl  { font-size: 0.82rem; color: #888; margin-bottom: 6px; }
+    .stat-card .stat-val  { font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
+    .stat-card .stat-sub  { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+    .stat-card.blue   { border-left-color: #0066cc; } .stat-card.blue  .stat-val, .stat-card.blue  .stat-sub { color: #0066cc; }
+    .stat-card.green  { border-left-color: #27ae60; } .stat-card.green .stat-val, .stat-card.green .stat-sub { color: #27ae60; }
+    .stat-card.red    { border-left-color: #e74c3c; } .stat-card.red   .stat-val, .stat-card.red   .stat-sub { color: #e74c3c; }
+    .stat-card.orange { border-left-color: #e67e22; } .stat-card.orange .stat-val, .stat-card.orange .stat-sub { color: #e67e22; }
+
+    /* ── Month picker ── */
+    .month-picker  { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .month-display { font-size: 1.15rem; font-weight: 700; min-width: 110px; text-align: center; }
+
+    /* ── Alert ── */
+    .alert { border-radius: 8px; padding: 12px 16px; font-size: 0.95rem; }
+    .alert.warning { background: #fff8e1; border-left: 4px solid #f39c12; color: #7d6608; }
+    .alert.info    { background: #e8f4fd; border-left: 4px solid #0066cc; color: #003d7a; }
+    .alert.success { background: #e8fdf0; border-left: 4px solid #27ae60; color: #1a5c35; }
+    .alert.error   { background: #fde8e8; border-left: 4px solid #e74c3c; color: #8b1c1c; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.92rem; }
+    th { background: #f5f7fa; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; font-size: 0.85rem; white-space: nowrap; border-bottom: 2px solid #e8e8e8; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .badge-paid   { background: #e8fdf0; color: #27ae60; }
+    .badge-unpaid { background: #fde8e8; color: #e74c3c; }
+
+    /* ── Inputs ── */
+    .text-input {
+      width: 100%; padding: 10px 12px; font-size: 1rem;
+      border: 2px solid #ddd; border-radius: 8px; font-family: inherit;
+    }
+    .text-input:focus { outline: none; border-color: #0066cc; }
+    .num-input {
+      width: 90px; padding: 5px 8px; font-size: 0.9rem;
+      border: 1.5px solid #ddd; border-radius: 6px; font-family: inherit; text-align: right;
+    }
+    .num-input:focus { outline: none; border-color: #0066cc; }
+    .txt-sm {
+      width: 100%; padding: 5px 8px; font-size: 0.9rem;
+      border: 1.5px solid #ddd; border-radius: 6px; font-family: inherit;
+    }
+    .txt-sm:focus { outline: none; border-color: #0066cc; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 9px 18px; font-size: 0.95rem; font-family: inherit; font-weight: 500;
+      border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.15s; gap: 6px;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0066cc; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-danger  { background: #e74c3c; color: white; }
+    .btn-ghost   { background: #eee;    color: #333; }
+    .btn-outline { background: white; color: #0066cc; border: 1.5px solid #0066cc; }
+    .btn-sm   { padding: 5px 10px; font-size: 0.82rem; border-radius: 6px; }
+    .btn-block { display: flex; width: 100%; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    .spinner-dark { border-color: rgba(0,0,0,0.15); border-top-color: #555; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Rooms tab ── */
+    .room-grid-hdr {
+      display: grid; grid-template-columns: 65px 1fr 90px 90px 72px;
+      gap: 8px; padding: 8px 4px;
+      font-size: 0.8rem; font-weight: 700; color: #888;
+      border-bottom: 2px solid #eee; margin-bottom: 4px;
+    }
+    .room-grid-row {
+      display: grid; grid-template-columns: 65px 1fr 90px 90px 72px;
+      gap: 8px; align-items: center; padding: 8px 4px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .room-grid-row:last-child { border-bottom: none; }
+    .room-id-lbl { font-weight: 700; font-size: 0.95rem; color: #0066cc; }
+    .group-hdr {
+      font-weight: 700; color: #555; font-size: 0.82rem;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 12px 4px 6px; border-top: 1px solid #eee; margin-top: 8px;
+    }
+    .group-hdr:first-child { border-top: none; margin-top: 0; }
+
+    /* ── Bill modal ── */
+    #modal-bill {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 500;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
+    }
+    .modal-box {
+      background: white; border-radius: 16px; padding: 28px;
+      max-width: 440px; width: 100%; margin: auto;
+    }
+    .bill-header { text-align: center; margin-bottom: 18px; }
+    .bill-title  { font-size: 1.25rem; font-weight: 700; }
+    .bill-meta   { color: #666; font-size: 0.9rem; margin-top: 6px; line-height: 1.5; }
+    .bill-dashed { border: none; border-top: 2px dashed #ddd; margin: 14px 0; }
+    .bill-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
+    .bill-row:last-of-type { border-bottom: none; }
+    .bill-row .blbl { color: #555; font-size: 0.95rem; }
+    .bill-row .bval { font-weight: 500; white-space: nowrap; }
+    .bill-total {
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 700; font-size: 1.1rem; color: #0066cc;
+      border-top: 2px solid #e0e0e0; padding-top: 10px; margin-top: 6px;
+    }
+    .bill-status-box {
+      text-align: center; margin-top: 14px; padding: 9px;
+      border-radius: 8px; font-weight: 700; font-size: 1rem;
+    }
+    .bill-status-box.paid   { background: #e8fdf0; color: #27ae60; }
+    .bill-status-box.unpaid { background: #fde8e8; color: #e74c3c; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; }
+
+    /* ── Field ── */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 0.9rem; font-weight: 500; color: #555; margin-bottom: 6px; }
+
+    /* ── Loading ── */
+    .loading-box { text-align: center; padding: 40px 20px; color: #aaa; }
+
+    /* ── Misc ── */
+    @media (max-width: 600px) {
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+      .room-grid-hdr, .room-grid-row { grid-template-columns: 55px 1fr 80px 72px; }
+      .room-grid-hdr > :nth-child(4),
+      .room-grid-row > :nth-child(4) { display: none; }
+    }
+
+    /* ── Print ── */
+    @media print {
+      #sect-login, #sect-admin { display: none !important; }
+      body { background: white !important; }
+      #modal-bill {
+        position: static !important; background: none !important;
+        padding: 0 !important; display: block !important; overflow: visible !important;
+      }
+      .modal-box { box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important; }
+      .modal-actions { display: none !important; }
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     LOGIN
+════════════════════════════════════ -->
+<div id="sect-login">
+  <div class="login-card">
+    <h1>Admin Panel</h1>
+    <p>ระบบจัดการค่าเช่า App-Room</p>
+    <div class="field">
+      <label for="input-pw">รหัสผ่าน</label>
+      <input id="input-pw" type="password" class="text-input" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+    </div>
+    <button id="btn-login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button>
+    <div id="msg-login" class="alert" style="display:none;margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     ADMIN
+════════════════════════════════════ -->
+<div id="sect-admin" hidden>
+
+  <div id="topbar">
+    <h1>App-Room Admin</h1>
+    <button id="btn-logout" class="btn btn-ghost btn-sm">ออกจากระบบ</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="billing">จัดการบิล</button>
+    <button class="tab-btn" data-tab="rooms">จัดการห้อง</button>
+  </div>
+
+  <!-- ─── Dashboard ─── -->
+  <div id="tab-dashboard" class="content">
+
+    <div class="month-picker">
+      <button id="btn-prev-month" class="btn btn-ghost btn-sm">◀ เดือนก่อน</button>
+      <span id="month-display" class="month-display"></span>
+      <button id="btn-next-month" class="btn btn-ghost btn-sm">เดือนถัดไป ▶</button>
+      <button id="btn-refresh" class="btn btn-outline btn-sm">รีเฟรช</button>
+    </div>
+
+    <div id="stat-grid" class="stat-grid">
+      <div class="loading-box" style="grid-column:1/-1">
+        <span class="spinner spinner-dark"></span> กำลังโหลด...
+      </div>
+    </div>
+
+    <div id="missing-section" class="card" style="display:none">
+      <div class="card-title">ห้องที่ยังไม่กรอกมิเตอร์</div>
+      <div id="missing-list"></div>
+    </div>
+
+    <div id="unpaid-section" class="card" style="display:none">
+      <div class="card-title">ห้องค้างจ่าย</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ห้อง</th><th>ผู้เช่า</th>
+              <th style="text-align:right">รวมเดือนนี้</th>
+              <th style="text-align:right">ค้างก่อน</th>
+              <th style="text-align:right">จ่ายแล้ว</th>
+              <th style="text-align:right">ยังค้าง</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="unpaid-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="dash-msg" class="alert" style="display:none"></div>
+  </div>
+
+  <!-- ─── Billing ─── -->
+  <div id="tab-billing" class="content" hidden>
+    <div class="card">
+      <div class="card-title">จัดการบิลเดือน <span id="billing-month"></span></div>
+      <p style="color:#888;font-size:0.9rem;margin-bottom:14px">
+        กรอก "ค่าปรับ" และ "จ่ายจริง" แล้วกด "บันทึก" ทีละแถว
+        — สถานะเปลี่ยน "จ่ายแล้ว" อัตโนมัติเมื่อ จ่ายจริง ≥ รวม
+      </p>
+      <div id="billing-msg" class="alert" style="display:none;margin-bottom:12px"></div>
+      <div id="billing-loading" class="loading-box">
+        <span class="spinner spinner-dark"></span> กำลังโหลด...
+      </div>
+      <div id="billing-table-wrap" hidden>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ห้อง</th><th>ผู้เช่า</th>
+                <th style="text-align:right">รวม</th>
+                <th style="text-align:right">ค่าปรับ</th>
+                <th style="text-align:right">จ่ายจริง</th>
+                <th>สถานะ</th>
+                <th></th><th></th>
+              </tr>
+            </thead>
+            <tbody id="billing-tbody"></tbody>
+          </table>
+        </div>
+        <div id="billing-empty" style="text-align:center;padding:30px;color:#aaa;display:none">
+          ยังไม่มีข้อมูลบิลสำหรับเดือนนี้
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Rooms ─── -->
+  <div id="tab-rooms" class="content" hidden>
+    <div class="card">
+      <div class="card-title">จัดการข้อมูลห้องพัก</div>
+      <p style="color:#888;font-size:0.9rem;margin-bottom:14px">
+        แก้ไขชื่อผู้เช่า, ค่าเช่า, ค่าเฟอร์นิเจอร์ แล้วกด "บันทึก"
+      </p>
+      <div id="rooms-msg" class="alert" style="display:none;margin-bottom:12px"></div>
+      <div id="rooms-loading" class="loading-box">
+        <span class="spinner spinner-dark"></span> กำลังโหลด...
+      </div>
+      <div id="rooms-content" hidden>
+        <div class="group-hdr">ตึก C (ชยางกูร)</div>
+        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อผู้เช่า</div><div>ค่าเช่า</div><div>เฟอร์นิเจอร์</div><div></div></div>
+        <div id="rooms-c"></div>
+        <div class="group-hdr">ตึก R (Runway)</div>
+        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อผู้เช่า</div><div>ค่าเช่า</div><div>เฟอร์นิเจอร์</div><div></div></div>
+        <div id="rooms-r"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sect-admin -->
+
+<!-- ════════════════════════════════════
+     BILL MODAL
+════════════════════════════════════ -->
+<div id="modal-bill" hidden>
+  <div class="modal-box">
+    <div class="bill-header">
+      <div class="bill-title">ใบแจ้งค่าเช่า</div>
+      <div id="bill-meta" class="bill-meta"></div>
+    </div>
+    <hr class="bill-dashed">
+    <div id="bill-body"></div>
+    <div class="modal-actions">
+      <button id="btn-print" class="btn btn-primary">พิมพ์</button>
+      <button id="btn-close-bill" class="btn btn-ghost">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCRIPT
+════════════════════════════════════ -->
+<script>
+
+// ──────────────────────────────────────────
+// State
+// ──────────────────────────────────────────
+var S = {
+  monthYear: currentMonthYear(),
+  dashData:  null,
+  allRooms:  null
+};
+
+// Data stores to avoid JSON-in-HTML
+var _unpaidData  = [];
+var _billingData = [];
+
+function currentMonthYear() {
+  var d = new Date();
+  return (d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
+function fmt(n)      { return Number(n || 0).toLocaleString('th-TH'); }
+function fmtB(n)     { return fmt(n) + ' บาท'; }
+
+// ──────────────────────────────────────────
+// Session
+// ──────────────────────────────────────────
+(function init() {
+  if (sessionStorage.getItem('admin_auth') === '1') showAdmin();
+})();
+
+function showAdmin() {
+  document.getElementById('sect-login').hidden = true;
+  document.getElementById('sect-admin').hidden = false;
+  updateMonthLabel();
+  loadDashboard();
+}
+
+// ──────────────────────────────────────────
+// Login
+// ──────────────────────────────────────────
+document.getElementById('input-pw').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('btn-login').click();
+});
+
+document.getElementById('btn-login').addEventListener('click', function() {
+  var pw = document.getElementById('input-pw').value.trim();
+  if (!pw) { showLoginMsg('กรุณากรอกรหัสผ่าน', 'error'); return; }
+
+  setLoading('btn-login', true, 'กำลังตรวจสอบ...');
+  clearEl('msg-login');
+
+  google.script.run
+    .withSuccessHandler(function(ok) {
+      setLoading('btn-login', false, 'เข้าสู่ระบบ');
+      if (ok) {
+        sessionStorage.setItem('admin_auth', '1');
+        showAdmin();
+      } else {
+        showLoginMsg('รหัสผ่านไม่ถูกต้อง', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      setLoading('btn-login', false, 'เข้าสู่ระบบ');
+      showLoginMsg('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .checkPassword(pw);
+});
+
+document.getElementById('btn-logout').addEventListener('click', function() {
+  sessionStorage.removeItem('admin_auth');
+  document.getElementById('sect-admin').hidden = true;
+  document.getElementById('sect-login').hidden = false;
+  document.getElementById('input-pw').value = '';
+  clearEl('msg-login');
+  S.dashData = null;
+  S.allRooms = null;
+});
+
+function showLoginMsg(text, type) {
+  var el = document.getElementById('msg-login');
+  el.textContent = text;
+  el.className = 'alert ' + type;
+  el.style.display = 'block';
+}
+
+// ──────────────────────────────────────────
+// Tab navigation
+// ──────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  ['dashboard','billing','rooms'].forEach(function(t) {
+    document.getElementById('tab-' + t).hidden = (t !== name);
+  });
+
+  if (name === 'billing') renderBillingTab();
+  if (name === 'rooms')   loadRoomsTab();
+}
+
+// ──────────────────────────────────────────
+// Month navigation
+// ──────────────────────────────────────────
+document.getElementById('btn-prev-month').addEventListener('click', function() { shiftMonth(-1); });
+document.getElementById('btn-next-month').addEventListener('click', function() { shiftMonth(+1); });
+document.getElementById('btn-refresh').addEventListener('click', function() {
+  S.dashData = null;
+  loadDashboard();
+});
+
+function shiftMonth(delta) {
+  var p = S.monthYear.split('/'), m = parseInt(p[0]), y = parseInt(p[1]);
+  m += delta;
+  if (m < 1) { m = 12; y--; }
+  if (m > 12) { m = 1;  y++; }
+  S.monthYear = m + '/' + y;
+  S.dashData  = null;
+  updateMonthLabel();
+  loadDashboard();
+}
+
+function updateMonthLabel() {
+  document.getElementById('month-display').textContent  = 'เดือน ' + S.monthYear;
+  document.getElementById('billing-month').textContent  = S.monthYear;
+}
+
+// ──────────────────────────────────────────
+// Dashboard
+// ──────────────────────────────────────────
+function loadDashboard() {
+  document.getElementById('stat-grid').innerHTML =
+    '<div class="loading-box" style="grid-column:1/-1"><span class="spinner spinner-dark"></span> กำลังโหลด...</div>';
+  document.getElementById('missing-section').style.display = 'none';
+  document.getElementById('unpaid-section').style.display  = 'none';
+  clearEl('dash-msg');
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      S.dashData = data;
+      renderDashboard(data);
+      // Re-render billing tab if it's currently visible
+      if (!document.getElementById('tab-billing').hidden) renderBillingFromData(data.rooms || []);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('stat-grid').innerHTML = '';
+      showMsg('dash-msg', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getDashboardData(S.monthYear);
+
+  google.script.run
+    .withSuccessHandler(renderMissingRooms)
+    .withFailureHandler(function() {})
+    .getMissingRooms(S.monthYear);
+}
+
+function renderDashboard(data) {
+  var rooms      = data.rooms || [];
+  var paidCount  = 0;
+  rooms.forEach(function(r) { if (r.status === 'จ่ายแล้ว') paidCount++; });
+  var unpaidCount = rooms.length - paidCount;
+
+  var stats = [
+    { lbl: 'ห้องที่มีข้อมูล', val: rooms.length, color: 'blue', big: true },
+    { lbl: 'จ่ายแล้ว',         val: paidCount,    color: 'green', big: true },
+    { lbl: 'ยังไม่จ่าย',       val: unpaidCount,  color: 'red',  big: true },
+    { lbl: 'ยอดที่ควรเก็บ',   val: fmtB(data.totalAmount),  color: 'blue' },
+    { lbl: 'เก็บได้จริง',     val: fmtB(data.totalPaid),    color: 'green' },
+    { lbl: 'ค้างรวม',          val: fmtB(data.totalPending), color: 'red' }
+  ];
+
+  document.getElementById('stat-grid').innerHTML = stats.map(function(s) {
+    return '<div class="stat-card ' + s.color + '">'
+      + '<div class="stat-lbl">' + s.lbl + '</div>'
+      + '<div class="' + (s.big ? 'stat-val' : 'stat-sub') + '">' + s.val + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Unpaid table
+  _unpaidData = rooms.filter(function(r) { return r.status !== 'จ่ายแล้ว'; });
+  if (_unpaidData.length > 0) {
+    document.getElementById('unpaid-tbody').innerHTML = _unpaidData.map(function(r, i) {
+      var outstanding = (r.total || 0) - (r.paid || 0);
+      return '<tr>'
+        + '<td><strong>' + r.roomId + '</strong></td>'
+        + '<td>' + (r.name || '—') + '</td>'
+        + '<td style="text-align:right">' + fmt(r.total) + '</td>'
+        + '<td style="text-align:right">' + (r.prevBalance > 0 ? '<span style="color:#e74c3c">' + fmt(r.prevBalance) + '</span>' : '—') + '</td>'
+        + '<td style="text-align:right">' + fmt(r.paid) + '</td>'
+        + '<td style="text-align:right;font-weight:600;color:#e74c3c">' + fmt(outstanding) + '</td>'
+        + '<td><button class="btn btn-outline btn-sm" onclick="showBillByKey(\'u\',' + i + ')">ดูบิล</button></td>'
+        + '</tr>';
+    }).join('');
+    document.getElementById('unpaid-section').style.display = 'block';
+  }
+}
+
+function renderMissingRooms(missing) {
+  if (!missing || missing.length === 0) return;
+  document.getElementById('missing-list').innerHTML =
+    '<div class="alert warning">'
+    + 'ยังไม่กรอกมิเตอร์ <strong>' + missing.length + ' ห้อง</strong>: '
+    + missing.join(', ')
+    + '</div>';
+  document.getElementById('missing-section').style.display = 'block';
+}
+
+// ──────────────────────────────────────────
+// Billing Tab
+// ──────────────────────────────────────────
+function renderBillingTab() {
+  if (S.dashData) {
+    renderBillingFromData(S.dashData.rooms || []);
+  } else {
+    // Data will arrive from loadDashboard (already in flight or call it)
+    document.getElementById('billing-loading').style.display = 'block';
+    document.getElementById('billing-table-wrap').hidden = true;
+    if (!S.dashData) loadDashboard();
+  }
+}
+
+function renderBillingFromData(rooms) {
+  _billingData = rooms;
+  document.getElementById('billing-loading').style.display = 'none';
+  document.getElementById('billing-table-wrap').hidden = false;
+
+  if (rooms.length === 0) {
+    document.getElementById('billing-tbody').innerHTML = '';
+    document.getElementById('billing-empty').style.display = 'block';
+    return;
+  }
+  document.getElementById('billing-empty').style.display = 'none';
+
+  document.getElementById('billing-tbody').innerHTML = rooms.map(function(r, i) {
+    return '<tr id="brow_' + i + '">'
+      + '<td><strong>' + r.roomId + '</strong></td>'
+      + '<td>' + (r.name || '—') + '</td>'
+      + '<td style="text-align:right" id="btotal_' + i + '">' + fmt(r.total) + '</td>'
+      + '<td><input class="num-input" type="number" id="bfine_' + i + '" value="' + (r.fine || 0) + '" min="0"></td>'
+      + '<td><input class="num-input" type="number" id="bpaid_' + i + '" value="' + (r.paid || 0) + '" min="0"></td>'
+      + '<td><span class="badge ' + (r.status === 'จ่ายแล้ว' ? 'badge-paid' : 'badge-unpaid') + '" id="bstatus_' + i + '">' + (r.status || 'ค้าง') + '</span></td>'
+      + '<td><button class="btn btn-success btn-sm" id="bsave_' + i + '" onclick="saveBillingRow(' + i + ')">บันทึก</button></td>'
+      + '<td><button class="btn btn-outline btn-sm" onclick="showBillByKey(\'b\',' + i + ')">ดูบิล</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function saveBillingRow(i) {
+  var roomId = _billingData[i].roomId;
+  var fine   = parseFloat(document.getElementById('bfine_' + i).value) || 0;
+  var paid   = parseFloat(document.getElementById('bpaid_' + i).value) || 0;
+
+  var btn = document.getElementById('bsave_' + i);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  clearEl('billing-msg');
+
+  // updateFine first → then updatePayment (fine affects total formula)
+  google.script.run
+    .withSuccessHandler(function() {
+      google.script.run
+        .withSuccessHandler(function() {
+          btn.disabled = false;
+          btn.innerHTML = 'บันทึก';
+
+          // Estimate new status from old total (fine change may shift total on sheet,
+          // but we show the old total until user refreshes)
+          var rec = _billingData[i];
+          var estTotal  = rec.total;
+          var newStatus = paid >= estTotal ? 'จ่ายแล้ว' : 'ค้าง';
+
+          var badge = document.getElementById('bstatus_' + i);
+          badge.textContent = newStatus;
+          badge.className   = 'badge ' + (newStatus === 'จ่ายแล้ว' ? 'badge-paid' : 'badge-unpaid');
+
+          rec.fine   = fine;
+          rec.paid   = paid;
+          rec.status = newStatus;
+
+          showMsg('billing-msg', 'บันทึกห้อง ' + roomId + ' สำเร็จ', 'success');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerHTML = 'บันทึก';
+          showMsg('billing-msg', 'บันทึกไม่สำเร็จ: ' + err.message, 'error');
+        })
+        .updatePayment(roomId, S.monthYear, paid);
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = 'บันทึก';
+      showMsg('billing-msg', 'บันทึกไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .updateFine(roomId, S.monthYear, fine);
+}
+
+// ──────────────────────────────────────────
+// Rooms Tab
+// ──────────────────────────────────────────
+function loadRoomsTab() {
+  if (S.allRooms) { renderRoomsTab(S.allRooms); return; }
+
+  document.getElementById('rooms-loading').style.display = 'block';
+  document.getElementById('rooms-content').hidden = true;
+
+  google.script.run
+    .withSuccessHandler(function(rooms) {
+      S.allRooms = rooms;
+      document.getElementById('rooms-loading').style.display = 'none';
+      document.getElementById('rooms-content').hidden = false;
+      renderRoomsTab(rooms);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('rooms-loading').style.display = 'none';
+      showMsg('rooms-msg', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getAllRoomsInfo();
+}
+
+function renderRoomsTab(rooms) {
+  var cRooms = rooms.filter(function(r) { return r.roomId[0] === 'C'; });
+  var rRooms = rooms.filter(function(r) { return r.roomId[0] === 'R'; });
+  document.getElementById('rooms-c').innerHTML = renderRoomRows(cRooms, 'c');
+  document.getElementById('rooms-r').innerHTML = renderRoomRows(rRooms, 'r');
+}
+
+function renderRoomRows(rooms, prefix) {
+  if (!rooms.length) return '<p style="color:#aaa;padding:8px 4px;font-size:0.9rem">ไม่มีห้อง</p>';
+  return rooms.map(function(r, i) {
+    var id = prefix + i;
+    return '<div class="room-grid-row" id="rdiv_' + id + '">'
+      + '<div class="room-id-lbl">' + r.roomId + '</div>'
+      + '<div><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า"></div>'
+      + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:78px"></div>'
+      + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:78px"></div>'
+      + '<div><button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button></div>'
+      + '</div>';
+  }).join('');
+}
+
+function saveRoomRow(roomId, id) {
+  var name      = document.getElementById('rname_' + id).value.trim();
+  var rent      = parseFloat(document.getElementById('rrent_' + id).value) || 0;
+  var furniture = parseFloat(document.getElementById('rfurn_' + id).value) || 0;
+
+  var btn = document.getElementById('rsave_' + id);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  clearEl('rooms-msg');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      btn.disabled = false;
+      btn.innerHTML = 'บันทึก';
+
+      if (S.allRooms) {
+        var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
+        if (rec) { rec.name = name; rec.rent = rent; rec.furniture = furniture; }
+      }
+      showMsg('rooms-msg', 'อัปเดตห้อง ' + roomId + ' สำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = 'บันทึก';
+      showMsg('rooms-msg', 'อัปเดตไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture });
+}
+
+// ──────────────────────────────────────────
+// Bill Modal
+// ──────────────────────────────────────────
+function showBillByKey(src, i) {
+  var rec = (src === 'u') ? _unpaidData[i] : _billingData[i];
+  if (rec) showBill(rec);
+}
+
+function showBill(rec) {
+  var elecUsed    = rec.elecUsed   != null ? rec.elecUsed   : ((rec.elecEnd  || 0) - (rec.elecStart  || 0));
+  var waterUsed   = rec.waterUsed  != null ? rec.waterUsed  : ((rec.waterEnd || 0) - (rec.waterStart || 0));
+  var elecAmount  = rec.elecAmount  || 0;
+  var waterAmount = rec.waterAmount || 0;
+  var prevBalance = rec.prevBalance || 0;
+  var fine        = rec.fine        || 0;
+  var item1Amount = rec.item1Amount || 0;
+  var item2Amount = rec.item2Amount || 0;
+  var paid        = rec.paid        || 0;
+  var total       = rec.total       || 0;
+  var status      = rec.status      || 'ค้าง';
+
+  document.getElementById('bill-meta').innerHTML =
+    'ห้อง <strong>' + rec.roomId + '</strong>'
+    + (rec.name ? ' · ' + escHtml(rec.name) : '')
+    + '<br>เดือน ' + S.monthYear;
+
+  var lines = [
+    { lbl: 'ค่าเช่า',              val: rec.rent      || 0 },
+    { lbl: 'ค่าเฟอร์นิเจอร์',     val: rec.furniture || 0 },
+    { lbl: 'ค่าไฟ (' + elecUsed  + ' หน่วย)', val: elecAmount  },
+    { lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย)', val: waterAmount }
+  ];
+  if (item1Amount) lines.push({ lbl: escHtml(rec.item1Name || 'รายการอื่น 1'), val: item1Amount });
+  if (item2Amount) lines.push({ lbl: escHtml(rec.item2Name || 'รายการอื่น 2'), val: item2Amount });
+  if (prevBalance > 0) lines.push({ lbl: 'ค้างเดือนก่อน', val: prevBalance, color: '#e74c3c' });
+  if (fine > 0)        lines.push({ lbl: 'ค่าปรับ',         val: fine,        color: '#e67e22' });
+
+  var html = lines.map(function(l) {
+    return '<div class="bill-row">'
+      + '<span class="blbl">' + l.lbl + '</span>'
+      + '<span class="bval"' + (l.color ? ' style="color:' + l.color + '"' : '') + '>' + fmtB(l.val) + '</span>'
+      + '</div>';
+  }).join('');
+
+  html += '<div class="bill-total"><span>รวมทั้งหมด</span><span>' + fmtB(total) + '</span></div>';
+  html += '<div class="bill-row"><span class="blbl">จ่ายจริง</span><span class="bval">' + fmtB(paid) + '</span></div>';
+
+  var remaining = total - paid;
+  if (remaining > 0 && status !== 'จ่ายแล้ว') {
+    html += '<div class="bill-row"><span class="blbl" style="color:#e74c3c">ยังค้าง</span><span class="bval" style="color:#e74c3c">' + fmtB(remaining) + '</span></div>';
+  }
+
+  html += '<div class="bill-status-box ' + (status === 'จ่ายแล้ว' ? 'paid' : 'unpaid') + '">' + status + '</div>';
+
+  document.getElementById('bill-body').innerHTML = html;
+  document.getElementById('modal-bill').hidden = false;
+}
+
+document.getElementById('btn-close-bill').addEventListener('click', function() {
+  document.getElementById('modal-bill').hidden = true;
+});
+document.getElementById('modal-bill').addEventListener('click', function(e) {
+  if (e.target === this) document.getElementById('modal-bill').hidden = true;
+});
+document.getElementById('btn-print').addEventListener('click', function() {
+  window.print();
+});
+
+// ──────────────────────────────────────────
+// Utilities
+// ──────────────────────────────────────────
+function showMsg(id, text, type) {
+  var el = document.getElementById(id);
+  el.textContent = text;
+  el.className   = 'alert ' + type;
+  el.style.display = 'block';
+  if (type === 'success') {
+    setTimeout(function() { el.style.display = 'none'; }, 4000);
+  }
+}
+
+function clearEl(id) {
+  var el = document.getElementById(id);
+  el.style.display = 'none';
+}
+
+function setLoading(btnId, loading, label) {
+  var btn = document.getElementById(btnId);
+  btn.disabled  = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span> ' + label : label;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
