@@ -31,9 +31,9 @@ R30A, R32, R33, R34, R35, R36, R37, R39, RC1, RC2, RC3, RC4
 - row 5 = header
 - row 6 เป็นต้นไป = ห้องจริง (46 ห้อง)
 
-**Named Ranges ที่ควรตั้ง:**
-- `UTIL_RATES` = A1:C3 (ส่วนราคาสาธารณูปโภค)
-- `ROOM_LIST` = A5:D50 (ส่วนรายชื่อห้อง)
+**DataService.gs ใช้ hardcoded range:**
+- ราคาสาธารณูปโภค = `A2:C3` (row 2-3, col A-C)
+- รายชื่อห้อง = `A6:D51` (row 6 เป็นต้นไป, col A-D)
 
 ---
 

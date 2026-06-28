@@ -60,13 +60,7 @@ function _setupSettingsSheet(sheet, ss) {
   sheet.setColumnWidth(4, 160);
   sheet.setFrozenRows(0);
 
-  // Named Ranges — ต้องเช็คก่อนลบ เพราะ removeNamedRange โยน uncatchable error ถ้า range ไม่มี
-  SpreadsheetApp.flush();
-  ss.getNamedRanges().forEach(function(nr) {
-    if (nr.getName() === 'UTIL_RATES' || nr.getName() === 'ROOM_LIST') nr.remove();
-  });
-  ss.setNamedRange('UTIL_RATES', sheet.getRange('A1:C3'));
-  ss.setNamedRange('ROOM_LIST',  sheet.getRange('A5:D' + (5 + rooms.length)));
+  // DataService.gs ใช้ hardcoded range แทน named range เพื่อความเรียบง่าย
 }
 
 function _setupRecordSheet(sheet) {
