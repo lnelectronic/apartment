@@ -2,6 +2,10 @@
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // ล้าง named ranges ทั้งหมดก่อน (ป้องกัน conflict จากการรันซ้ำที่ fail กลางคัน)
+  ss.getNamedRanges().forEach(function(nr) { nr.remove(); });
+  SpreadsheetApp.flush();
+
   // สร้าง sheets ที่ต้องการก่อน แล้วค่อยลบ default sheets
   var settingsSheet = ss.getSheetByName('ตั้งค่า') || ss.insertSheet('ตั้งค่า');
   var recordSheet   = ss.getSheetByName('บันทึก')  || ss.insertSheet('บันทึก');
