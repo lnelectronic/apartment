@@ -269,7 +269,7 @@
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="billing">จัดการบิล</button>
     <button class="tab-btn" data-tab="rooms">จัดการห้อง</button>
-    <button class="tab-btn tab-link" onclick="window.open(window.location.href.replace(/\?.*$/,'')+'?page=staff','_blank')">อ่านมิเตอร์ ↗</button>
+    <button class="tab-btn tab-link" onclick="openStaffPage()">จดค่ามิเตอร์ ↗</button>
   </div>
 
   <!-- ─── Dashboard ─── -->
@@ -417,6 +417,12 @@ function currentMonthYear() {
 
 function fmt(n)      { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtB(n)     { return fmt(n) + ' บาท'; }
+
+function openStaffPage() {
+  google.script.url.getLocation(function(loc) {
+    window.open(loc.href.replace(/\?.*$/, '') + '?page=staff', '_blank');
+  });
+}
 
 // ──────────────────────────────────────────
 // Session
