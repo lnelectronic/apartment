@@ -64,7 +64,7 @@ App-Room/
 # รันจาก root เสมอ (ที่อยู่ของ .clasp.json)
 clasp push          # push โค้ดขึ้น Apps Script
 clasp deploy        # สร้าง deployment ใหม่
-# clasp open ใช้ไม่ได้บน WSL — เปิด browser เองที่ https://script.google.com/d/SCRIPT_ID/edit
+# clasp open ใช้ไม่ได้บน WSL — เปิด browser เองที่ https://script.google.com/d/1uP1yiroqBv4hInGJ1jbQxRyznieX4QWczv4RhLok8qUFKkNZIQ0dHiro/edit
 ```
 
 ## ข้อมูลทดสอบ (เปลี่ยนก่อนส่งมอบ)

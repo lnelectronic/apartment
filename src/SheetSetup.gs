@@ -75,6 +75,9 @@ function _setupRecordSheet(sheet) {
   sheet.clearContents();
   sheet.clearFormats();
 
+  // ป้องกัน Sheets auto-convert "6/2026" → Date object (จะทำให้ _findRecordRow เจอ type mismatch)
+  sheet.getRange('A:A').setNumberFormat('@');
+
   var headers = [
     'เดือน/ปี',       // col 1  A
     'เลขห้อง',        // col 2  B
