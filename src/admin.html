@@ -928,8 +928,10 @@ function _fetchMeterData(monthYear) {
   google.script.run
     .withSuccessHandler(function(data) {
       loading.style.display = 'none';
-      _renderMeterWarning(data.warnings || [], data.vacantAlerts || []);
+      var warnings = data.warnings || [];
+      _renderMeterWarning(warnings, data.vacantAlerts || []);
       _renderMeterTab(data.rooms || []);
+      document.getElementById('btn-approve-meter').disabled = warnings.length > 0;
     })
     .withFailureHandler(function(err) {
       loading.style.display = 'none';

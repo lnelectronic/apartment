@@ -239,6 +239,7 @@ function getMonthMeterSummary(monthStr) {
   });
 
   var rooms = [], warnings = [], vacantAlerts = [];
+  var seenRooms = {};
   for (var i = 1; i < allData.length; i++) {
     var d = allData[i];
     if (_toMonthYear(d[0]) !== monthStr) continue;
@@ -248,6 +249,7 @@ function getMonthMeterSummary(monthStr) {
     var elecUsed    = Number(d[4])  || 0;
     var waterUsed   = Number(d[8])  || 0;
     var meterStatus = d[22]         || '';
+    seenRooms[roomId] = true;
     rooms.push({
       room: roomId, tenantName: tenantName, isEmpty: isEmpty,
       elecStart: d[2],  elecEnd:   d[3],  elecUsed:   elecUsed,
@@ -257,6 +259,10 @@ function getMonthMeterSummary(monthStr) {
     if (meterStatus === 'draft-elec' || meterStatus === 'draft-water') warnings.push(roomId);
     if (isEmpty && (elecUsed > 0 || waterUsed > 0)) vacantAlerts.push(roomId);
   }
+  // ห้องที่ไม่มี row เลยในเดือนนี้ = ยังไม่ได้จดมิเตอร์
+  Object.keys(nameMap).forEach(function(roomId) {
+    if (!seenRooms[roomId]) warnings.push(roomId);
+  });
   return { rooms: rooms, warnings: warnings, vacantAlerts: vacantAlerts };
 }
 
