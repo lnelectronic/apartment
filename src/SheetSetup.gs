@@ -7,22 +7,105 @@ function setupSheets() {
   SpreadsheetApp.flush();
 
   // สร้าง sheets ที่ต้องการก่อน แล้วค่อยลบ default sheets
-  var settingsSheet = ss.getSheetByName('ตั้งค่า') || ss.insertSheet('ตั้งค่า');
-  var recordSheet   = ss.getSheetByName('บันทึก')  || ss.insertSheet('บันทึก');
+  var settingsSheet = ss.getSheetByName('ตั้งค่า')      || ss.insertSheet('ตั้งค่า');
+  var recordSheet   = ss.getSheetByName('บันทึก')       || ss.insertSheet('บันทึก');
+  var histSheet     = ss.getSheetByName('ประวัติผู้เช่า') || ss.insertSheet('ประวัติผู้เช่า');
 
   // ลบ sheets อื่นที่ Google สร้าง default ไว้
   ss.getSheets().forEach(function(sheet) {
     var name = sheet.getName();
-    if (name !== 'ตั้งค่า' && name !== 'บันทึก') {
+    if (name !== 'ตั้งค่า' && name !== 'บันทึก' && name !== 'ประวัติผู้เช่า') {
       ss.deleteSheet(sheet);
     }
   });
 
   _setupSettingsSheet(settingsSheet, ss);
   _setupRecordSheet(recordSheet);
+  _setupTenantHistorySheet(histSheet);
 
   SpreadsheetApp.flush();
   Logger.log('Setup สำเร็จ! ห้องทั้งหมด ' + _getRoomList().length + ' ห้อง พร้อมใช้งาน');
+}
+
+// ------------------------------------------------------------------ //
+
+function _setupTenantHistorySheet(sheet) {
+  sheet.clearContents();
+  sheet.clearFormats();
+
+  var headers = [
+    'เลขห้อง', 'ชื่อผู้เช่า', 'เบอร์โทร',
+    'วันย้ายเข้า', 'วันย้ายออก', 'เงินมัดจำ',
+    'หัก-1 รายการ', 'หัก-1 จำนวน',
+    'หัก-2 รายการ', 'หัก-2 จำนวน',
+    'ยอดค้าง', 'ยอดคืน/ขาด'
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
+  sheet.getRange(1, 1, 1, headers.length)
+    .setTextStyle(headerStyle)
+    .setBackground('#cc4125')
+    .setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
+
+  sheet.setFrozenRows(1);
+  sheet.setRowHeight(1, 40);
+
+  sheet.setColumnWidth(1,  90);   // เลขห้อง
+  sheet.setColumnWidth(2,  160);  // ชื่อผู้เช่า
+  sheet.setColumnWidth(3,  130);  // เบอร์โทร
+  sheet.setColumnWidth(4,  110);  // วันย้ายเข้า
+  sheet.setColumnWidth(5,  110);  // วันย้ายออก
+  sheet.setColumnWidth(6,  110);  // เงินมัดจำ
+  sheet.setColumnWidth(7,  160);  // หัก-1 รายการ
+  sheet.setColumnWidth(8,  90);   // หัก-1 จำนวน
+  sheet.setColumnWidth(9,  160);  // หัก-2 รายการ
+  sheet.setColumnWidth(10, 90);   // หัก-2 จำนวน
+  sheet.setColumnWidth(11, 90);   // ยอดค้าง
+  sheet.setColumnWidth(12, 110);  // ยอดคืน/ขาด
+}
+
+// ------------------------------------------------------------------ //
+// Migration: เพิ่ม col G-J (ตั้งค่า) + สร้าง Sheet "ประวัติผู้เช่า"
+// รันครั้งเดียวบน Sheet ที่มีข้อมูลผู้เช่าอยู่แล้ว
+function migrateAddTenantFields() {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _getSettingsSheet();
+
+  // ตรวจว่า col G มีแล้วหรือยัง (ป้องกันรันซ้ำ)
+  var existing = sheet.getRange('G5').getValue();
+  if (existing && existing !== '') {
+    Logger.log('migrateAddTenantFields: col G5 มีข้อมูลอยู่แล้ว ("' + existing + '") — ข้าม');
+    return;
+  }
+
+  // เพิ่ม header G5:J5
+  sheet.getRange('G5:J5').setValues([[
+    'วันที่ย้ายเข้า', 'เงินมัดจำ (บาท)', 'เบอร์โทรศัพท์', 'Note ห้อง'
+  ]]);
+  var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
+  sheet.getRange('G5:J5')
+    .setTextStyle(headerStyle)
+    .setBackground('#6aa84f')
+    .setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
+
+  sheet.setColumnWidth(7,  120);
+  sheet.setColumnWidth(8,  120);
+  sheet.setColumnWidth(9,  140);
+  sheet.setColumnWidth(10, 160);
+
+  // อัป banding ให้ครอบ 10 cols
+  _applyRoomBanding(sheet);
+
+  // สร้าง Sheet "ประวัติผู้เช่า" ถ้ายังไม่มี
+  var histSheet = ss.getSheetByName('ประวัติผู้เช่า') || ss.insertSheet('ประวัติผู้เช่า');
+  _setupTenantHistorySheet(histSheet);
+
+  SpreadsheetApp.flush();
+  Logger.log('migrateAddTenantFields: สำเร็จ — เพิ่ม col G-J (ตั้งค่า) + Sheet "ประวัติผู้เช่า"');
 }
 
 // ------------------------------------------------------------------ //
@@ -63,7 +146,7 @@ function _applyRoomBanding(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 6) return; // ยังไม่มีข้อมูลห้อง
 
-  sheet.getRange(6, 1, lastRow - 5, 6)
+  sheet.getRange(6, 1, lastRow - 5, 10)
     .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
 }
 
@@ -84,30 +167,35 @@ function _setupSettingsSheet(sheet, ss) {
   // row 4 ว่าง (spacer)
 
   // ส่วนที่ 2: รายชื่อห้อง (row 5 = header, row 6+ = data)
-  sheet.getRange('A5:F5').setValues([[
+  sheet.getRange('A5:J5').setValues([[
     'เลขห้อง', 'ชื่อผู้เช่า', 'ค่าเช่า (บาท)', 'ค่าเฟอร์นิเจอร์ (บาท)',
-    'ไฟ-เริ่มต้น (หน่วย)', 'น้ำ-เริ่มต้น (หน่วย)'
+    'ไฟ-เริ่มต้น (หน่วย)', 'น้ำ-เริ่มต้น (หน่วย)',
+    'วันที่ย้ายเข้า', 'เงินมัดจำ (บาท)', 'เบอร์โทรศัพท์', 'Note ห้อง'
   ]]);
 
   var rooms = _getRoomList();
   var roomData = rooms.map(function(roomId, i) {
     var rent = (i % 2 === 0) ? 2000 : 5000; // ค่าทดสอบ — แอดมินแก้ได้
-    return [roomId, '', rent, 0, 0, 0];
+    return [roomId, '', rent, 0, 0, 0, '', 0, '', ''];
   });
-  sheet.getRange(6, 1, roomData.length, 6).setValues(roomData);
+  sheet.getRange(6, 1, roomData.length, 10).setValues(roomData);
 
   // Formatting
   var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
   sheet.getRange('A1:D1').setTextStyle(headerStyle).setBackground('#4a86e8').setFontColor('#ffffff');
-  sheet.getRange('A5:F5').setTextStyle(headerStyle).setBackground('#6aa84f').setFontColor('#ffffff');
-  sheet.getRange('A1:F1').setHorizontalAlignment('center');
-  sheet.getRange('A5:F5').setHorizontalAlignment('center');
+  sheet.getRange('A5:J5').setTextStyle(headerStyle).setBackground('#6aa84f').setFontColor('#ffffff');
+  sheet.getRange('A1:D1').setHorizontalAlignment('center');
+  sheet.getRange('A5:J5').setHorizontalAlignment('center');
   sheet.setColumnWidth(1, 100);
   sheet.setColumnWidth(2, 180);
   sheet.setColumnWidth(3, 140);
   sheet.setColumnWidth(4, 160);
   sheet.setColumnWidth(5, 150);
   sheet.setColumnWidth(6, 150);
+  sheet.setColumnWidth(7, 120);
+  sheet.setColumnWidth(8, 120);
+  sheet.setColumnWidth(9, 140);
+  sheet.setColumnWidth(10, 160);
   sheet.setFrozenRows(0);
 
   // สีสลับบรรทัดส่วนรายชื่อห้อง

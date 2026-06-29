@@ -1,6 +1,6 @@
 # Plan: Checkout Flow + Tenant History + Room Fields
 
-## สถานะ: ยังไม่เริ่ม (Session 1 พร้อมทำ)
+## สถานะ: Session 1 เสร็จแล้ว ✓ (Session 2 พร้อมทำ)
 
 ---
 

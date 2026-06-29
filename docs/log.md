@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-06-29 (3)
+
+### feat: SheetSetup — tenant fields G-J + ประวัติผู้เช่า sheet (Session 1)
+
+**การเปลี่ยนแปลง**:
+- `_setupSettingsSheet()`: header `A5:J5` (+4 cols: วันที่ย้ายเข้า, เงินมัดจำ, เบอร์โทรศัพท์, Note ห้อง); roomData 10 cols; column widths G-J
+- `_applyRoomBanding()`: ขยาย banding จาก 6 → 10 cols
+- `_setupTenantHistorySheet()` (ใหม่): header 12 cols, freeze row 1, style header สีแดง
+- `setupSheets()`: สร้าง + setup Sheet "ประวัติผู้เช่า"; filter deleteSheet เก็บ 3 sheets
+- `migrateAddTenantFields()` (ใหม่): migration สำหรับ Sheet ที่มีข้อมูลอยู่แล้ว — เพิ่ม G5:J5 header + banding + สร้าง Sheet "ประวัติผู้เช่า"
+
+---
+
 ## 2026-06-29 (2)
 
 ### feat: เปลี่ยนวิธีคำนวณค่าน้ำ — All-or-nothing threshold (DataService.gs, SheetSetup.gs, admin.html, design.md)
