@@ -3,7 +3,9 @@
 function doGet(e) {
   var page = (e && e.parameter && e.parameter.page) || 'staff';
   var file = (page === 'admin') ? 'admin' : (page === 'meter') ? 'meter' : 'staff';
-  return HtmlService.createTemplateFromFile(file).evaluate()
+  var tmpl = HtmlService.createTemplateFromFile(file);
+  tmpl.appUrl = ScriptApp.getService().getUrl();
+  return tmpl.evaluate()
     .setTitle('App-Room')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
