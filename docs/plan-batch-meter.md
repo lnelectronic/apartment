@@ -12,11 +12,18 @@
 ## สรุป Design Decisions
 
 ### Batch Meter Entry
-- Staff เลือก ไฟ หรือ น้ำ → เห็นทุกห้อง (47 ห้อง) บนหน้าเดียว scroll ได้
+- Staff เลือก session จาก **4 ปุ่ม** (ตึง C ไฟ / ตึง C น้ำ / ตึง R ไฟ / ตึง R น้ำ) → เห็นเฉพาะห้องในตึงนั้น (~19 หรือ ~28 ห้อง)
 - แต่ละห้องแสดง: เลขห้อง, ชื่อผู้เช่า, มิเตอร์เริ่ม (readonly), input ถึง
+- ห้องที่จดไปแล้วเดือนนี้ → **prefill** ค่า "ถึง" ที่บันทึกไว้ (แก้ได้)
 - กด submit → review screen (เริ่ม / ถึง / ใช้ไป / เป็นเงิน ต่อห้อง สำหรับ utility ที่จดมา)
 - กด confirm → save เป็น draft ลง sheet "บันทึก"
-- ไฟ และ น้ำ จด**คนละ session** เพราะมิเตอร์อยู่คนละที่
+- ต้องทำ **4 sessions ต่อเดือน** (2 ตึง × 2 ประเภทมิเตอร์) — ทำสลับลำดับได้ ไม่มี dependency
+
+### Building Split (ข้อค้นพบจาก grilling 2026-06-29)
+- **ตึง C และ ตึง R ห่างกัน 3 กม.** + staff คนละคนดูแลแต่ละตึง
+- Staff login เดียวกัน password เดียวกัน (สลับกันช่วยได้) แต่ทำงาน batch ทีละตึง
+- Owner approve **ทั้งเดือนรวดเดียว** (รอครบทั้งสองตึง) — `confirmMonth()` ไม่เปลี่ยน
+- Warning บน approval screen จะครอบคลุมกรณีที่ตึงใดตึงหนึ่งยังไม่จดครบโดยอัตโนมัติ
 
 ### Draft & Approval Flow
 - เพิ่ม column **สถานะมิเตอร์** (col 23) ใน sheet "บันทึก"
@@ -197,18 +204,29 @@ Session 2 ต้อง deploy ก่อน session นี้
 
 **ไฟล์ที่แก้**:
 - `src/staff.html` — เพิ่ม batch section
-- `src/DataService.gs` — เพิ่ม `getAllRoomsWithPrevMeter(monthStr, meterType)` คืน array ของทุกห้องพร้อม prev meter
+- `src/DataService.gs` — เพิ่ม `getAllRoomsWithPrevMeter(monthStr, meterType, building)` คืน array ของห้องในตึงนั้นพร้อม prev meter และข้อมูลเดือนนี้ (ถ้ามี)
 
 **Flow**:
-1. Staff กด "จด batch ทุกห้อง" → เลือก ไฟ หรือ น้ำ
-2. โหลด list ทุกห้อง (47 ห้อง) พร้อมค่า เริ่ม จาก server
-3. แสดงตาราง scroll: เลขห้อง | ชื่อผู้เช่า | เริ่ม | input ถึง
+1. Staff กด "จด batch ทุกห้อง" → เห็น **4 ปุ่ม**: ตึง C — ไฟ / ตึง C — น้ำ / ตึง R — ไฟ / ตึง R — น้ำ
+2. เลือก 1 ปุ่ม → โหลด list ห้องในตึงนั้น (~19 หรือ ~28 ห้อง) พร้อมค่า เริ่ม จาก server
+3. แสดงตาราง scroll: เลขห้อง | ชื่อผู้เช่า | เริ่ม | input ถึง — ห้องที่จดไปแล้วเดือนนี้ **prefill** ค่า "ถึง" เดิม
 4. กด submit → **review screen**: แสดงทุกห้องที่กรอก (ข้ามห้องที่ไม่ได้กรอก) พร้อม เริ่ม / ถึง / ใช้ไป / เป็นเงิน
 5. ห้องว่าง (ชื่อผู้เช่าว่าง) ที่ใช้ไป > 0 → **flag สีแดง** ใน review screen
 6. กด confirm → save ทุกห้องเป็น batch (meterType=elec หรือ water)
 
+**`getAllRoomsWithPrevMeter(monthStr, meterType, building)`**:
+- `building`: `'C'` หรือ `'R'` — filter ด้วย `room[0] === building`
+- ดึงรายชื่อห้องในตึงนั้นจาก "ตั้งค่า" (A6:F51)
+- สำหรับแต่ละห้อง ดึง prevMeter (elec หรือ water) จาก "บันทึก" เดือนก่อน
+- ดึง existingEnd จาก "บันทึก" เดือนนี้ (ถ้ามี) — สำหรับ prefill
+- คืน array: `[{room, tenantName, prevMeter, existingEnd, isEmpty}]`
+  - `prevMeter`: ค่า "ถึง" เดือนก่อน (ใช้เป็นค่า "เริ่ม")
+  - `existingEnd`: ค่า "ถึง" เดือนนี้ถ้ามีอยู่แล้ว, `null` ถ้ายังไม่ได้จด
+
 **ทดสอบ**:
-- โหลด batch → เห็น 47 ห้องครบ
+- เลือก "ตึง C — ไฟ" → เห็นเฉพาะ 19 ห้องตึง C (ไม่มีตึง R)
+- เลือก "ตึง R — น้ำ" → เห็นเฉพาะ ~28 ห้องตึง R
+- ห้องที่จดไฟไปแล้ว เปิด batch ซ้ำ → prefill ค่าเดิม
 - กรอกบางห้อง submit → review เห็นเฉพาะห้องที่กรอก
 - ห้องว่างที่ใช้ > 0 → มี flag
 - confirm → sheet ได้รับข้อมูลครบ status = draft-elec หรือ draft-water
@@ -221,16 +239,20 @@ Session 2 ต้อง deploy ก่อน session นี้
 อ่าน docs/plan-batch-meter.md และ design.md ก่อน แล้วทำ Session 4: Batch Meter Entry UI
 
 งาน:
-1. DataService.gs: เพิ่ม getAllRoomsWithPrevMeter(monthStr, meterType)
-   - ดึงรายชื่อทุกห้องจาก "ตั้งค่า" (A6:F51)
-   - สำหรับแต่ละห้อง ดึง prevMeter (elec หรือ water) จาก "บันทึก" เดือนก่อน
-   - คืน array: [{room, tenantName, prevMeter, isEmpty}]
+1. DataService.gs: เพิ่ม getAllRoomsWithPrevMeter(monthStr, meterType, building)
+   - building: 'C' หรือ 'R' — filter ด้วย room[0] === building
+   - ดึงรายชื่อห้องในตึงนั้นจาก "ตั้งค่า" (A6:F51)
+   - สำหรับแต่ละห้อง ดึง prevMeter (ค่า "ถึง" ของ elec หรือ water จากเดือนก่อน)
+   - ดึง existingEnd จากเดือนนี้ (ถ้ามี) เพื่อ prefill
+   - คืน array: [{room, tenantName, prevMeter, existingEnd, isEmpty}]
 
-2. staff.html: section "จด batch ทุกห้อง"
-   - step 1: เลือก ไฟ หรือ น้ำ
-   - step 2: ตาราง scroll แสดงทุกห้อง (เลขห้อง | ชื่อผู้เช่า | เริ่ม | input ถึง) ห้องว่าง label ว่า "(ว่าง)"
-   - step 3 (review): แสดงเฉพาะห้องที่กรอก พร้อม เริ่ม/ถึง/ใช้ไป/เป็นเงิน — ห้องว่างที่ใช้ > 0 แสดง badge "⚠️ ห้องว่าง"
-   - step 4: confirm → เรียก saveRecord() แบบ batch สำหรับทุกห้องที่กรอก
+2. staff.html: แทนที่ sect-batch placeholder ด้วย batch flow จริง
+   - step 1 (เลือก session): 4 ปุ่ม — "ตึง C ⚡ ไฟ" / "ตึง C 💧 น้ำ" / "ตึง R ⚡ ไฟ" / "ตึง R 💧 น้ำ"
+   - step 2 (ตาราง): โหลดห้องในตึงนั้น แสดง scroll table (เลขห้อง | ชื่อผู้เช่า | เริ่ม | input ถึง)
+     ห้องที่มี existingEnd → prefill input "ถึง" ด้วยค่านั้น, ห้องว่าง label ว่า "(ว่าง)"
+   - step 3 (review): แสดงเฉพาะห้องที่กรอก พร้อม เริ่ม/ถึง/ใช้ไป/เป็นเงิน
+     ห้องว่างที่ใช้ > 0 แสดง badge "⚠ ห้องว่าง"
+   - step 4 (confirm): เรียก saveRecord() แบบ batch สำหรับทุกห้องที่กรอก
 
 Session 1, 2, 3 ต้อง deploy ก่อน session นี้
 ```
