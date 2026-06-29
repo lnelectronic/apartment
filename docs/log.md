@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-06-29 (5)
+
+### feat: admin — checkout modal + room grid tenant fields (Session 3)
+
+**การเปลี่ยนแปลง**:
+- CSS grid เพิ่มจาก 7 → 11 cols (ห้อง | ชื่อ | **เบอร์** | เช่า | เฟอร์ | **มัดจำ** | **วันย้ายเข้า** | **Note** | ไฟเริ่ม | น้ำเริ่ม | buttons); min-width 680→1100px
+- `renderRoomRows()`: เพิ่ม inputs `rphone_`, `rdeposit_`, `rmovein_`, `rnote_` ในทุก row
+- `saveRoomRow()`: อ่านและส่ง fields ใหม่ (phone, deposit, moveInDate, note) ไปยัง `updateRoomInfo()`
+- `startCheckOut()`: เปลี่ยนจาก confirm dialog → เปิด `#modal-checkout`; เรียก `getCheckOutInfo()` แทน `getOutstandingBalance()`
+- ลบ `doCheckOut()` — logic ย้ายเข้า modal confirm handler โดยตรง
+- `recalcCheckOut()` (ใหม่): คำนวณยอดคืน/ขาด realtime เมื่อกรอกรายการหัก
+- Modal `#modal-checkout`: แสดง ชื่อ/เบอร์/วันย้ายเข้า/มัดจำ/ยอดค้าง; กรอกหัก 2 รายการ; กด "ยืนยัน" → `checkOutRoom(roomId, deductions)` → clear rec fields รวม phone/deposit/moveInDate
+
+---
+
 ## 2026-06-29 (4)
 
 ### feat: DataService — checkout with deductions + tenant history (Session 2)

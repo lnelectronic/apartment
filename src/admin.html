@@ -140,13 +140,13 @@
 
     /* ── Rooms tab ── */
     .room-grid-hdr {
-      display: grid; grid-template-columns: 60px 1fr 82px 82px 100px 100px 155px;
+      display: grid; grid-template-columns: 60px 1fr 100px 82px 82px 82px 100px 120px 100px 100px 155px;
       gap: 8px; padding: 8px 4px;
       font-size: 0.8rem; font-weight: 700; color: #888;
       border-bottom: 2px solid #eee; margin-bottom: 4px;
     }
     .room-grid-row {
-      display: grid; grid-template-columns: 60px 1fr 82px 82px 100px 100px 155px;
+      display: grid; grid-template-columns: 60px 1fr 100px 82px 82px 82px 100px 120px 100px 100px 155px;
       gap: 8px; align-items: center; padding: 8px 4px;
       border-bottom: 1px solid #f0f0f0;
     }
@@ -209,7 +209,14 @@
       .stat-grid { grid-template-columns: 1fr 1fr; }
       .room-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .room-grid-hdr,
-      .room-grid-row { min-width: 680px; }
+      .room-grid-row { min-width: 1100px; }
+    }
+
+    /* ── Checkout modal ── */
+    #modal-checkout {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 500;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
     }
 
     /* ── Print ── */
@@ -384,12 +391,22 @@
       <div id="rooms-content" hidden>
         <div class="group-hdr">ตึก C (ชยางกูร)</div>
         <div class="room-grid-wrap">
-          <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
+          <div class="room-grid-hdr">
+            <div>ห้อง</div><div>ชื่อ</div><div>เบอร์</div>
+            <div>เช่า</div><div>เฟอร์</div><div>มัดจำ</div>
+            <div>วันย้ายเข้า</div><div>Note</div>
+            <div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div>
+          </div>
           <div id="rooms-c"></div>
         </div>
         <div class="group-hdr">ตึก R (Runway)</div>
         <div class="room-grid-wrap">
-          <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
+          <div class="room-grid-hdr">
+            <div>ห้อง</div><div>ชื่อ</div><div>เบอร์</div>
+            <div>เช่า</div><div>เฟอร์</div><div>มัดจำ</div>
+            <div>วันย้ายเข้า</div><div>Note</div>
+            <div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div>
+          </div>
           <div id="rooms-r"></div>
         </div>
       </div>
@@ -417,6 +434,37 @@
 </div>
 
 <!-- ════════════════════════════════════
+     CHECKOUT MODAL
+════════════════════════════════════ -->
+<div id="modal-checkout" hidden>
+  <div class="modal-box">
+    <div class="bill-header">
+      <div class="bill-title">ย้ายออก</div>
+      <div id="co-meta" class="bill-meta"></div>
+    </div>
+    <hr class="bill-dashed">
+    <div id="co-body"></div>
+    <div style="margin-top:16px">
+      <div style="margin-bottom:8px;font-weight:600">รายการหัก</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input id="co-d1name" placeholder="รายการ เช่น ค่าทำความสะอาด" style="flex:1;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.9rem">
+        <input id="co-d1amt"  type="number" placeholder="จำนวน" style="width:90px;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.9rem">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="co-d2name" placeholder="รายการ เช่น ค่าของเสียหาย" style="flex:1;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.9rem">
+        <input id="co-d2amt"  type="number" placeholder="จำนวน" style="width:90px;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.9rem">
+      </div>
+    </div>
+    <div id="co-result" class="bill-total" style="margin-top:16px"></div>
+    <div id="co-msg" class="alert" style="display:none;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button id="co-btn-confirm" class="btn btn-danger" style="flex:1">ยืนยันย้ายออก</button>
+      <button id="co-btn-cancel"  class="btn btn-ghost">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
      SCRIPT
 ════════════════════════════════════ -->
 <script>
@@ -433,6 +481,11 @@ var S = {
 // Data stores to avoid JSON-in-HTML
 var _unpaidData  = [];
 var _billingData = [];
+
+// Checkout modal state
+var _coRoomId = null;
+var _coId     = null;
+var _coInfo   = null;
 
 function currentMonthYear() {
   var d = new Date();
@@ -842,8 +895,12 @@ function renderRoomRows(rooms, prefix) {
     return '<div class="room-grid-row" id="rdiv_' + id + '">'
       + '<div class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</div>'
       + '<div><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า"></div>'
+      + '<div><input class="txt-sm" type="text" id="rphone_' + id + '" value="' + escHtml(r.phone || '') + '" placeholder="เบอร์โทร" style="width:95px"></div>'
       + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:70px"></div>'
       + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:70px"></div>'
+      + '<div><input class="num-input" type="number" id="rdeposit_' + id + '" value="' + (r.deposit || 0) + '" min="0" style="width:70px"></div>'
+      + '<div><input class="txt-sm" type="text" id="rmovein_' + id + '" value="' + escHtml(r.moveInDate || '') + '" placeholder="dd/MM/yyyy" style="width:95px"></div>'
+      + '<div><input class="txt-sm" type="text" id="rnote_' + id + '" value="' + escHtml(r.note || '') + '" placeholder="Note" style="width:115px"></div>'
       + '<div><input class="num-input" type="number" id="relec_' + id + '" value="' + (r.elecInit || 0) + '" min="0" style="width:88px"></div>'
       + '<div><input class="num-input" type="number" id="rwater_' + id + '" value="' + (r.waterInit || 0) + '" min="0" style="width:88px"></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
@@ -855,11 +912,15 @@ function renderRoomRows(rooms, prefix) {
 }
 
 function saveRoomRow(roomId, id) {
-  var name      = document.getElementById('rname_' + id).value.trim();
-  var rent      = parseFloat(document.getElementById('rrent_' + id).value) || 0;
-  var furniture = parseFloat(document.getElementById('rfurn_' + id).value) || 0;
-  var elecInit  = parseFloat(document.getElementById('relec_' + id).value) || 0;
-  var waterInit = parseFloat(document.getElementById('rwater_' + id).value) || 0;
+  var name       = document.getElementById('rname_'    + id).value.trim();
+  var phone      = document.getElementById('rphone_'   + id).value.trim();
+  var rent       = parseFloat(document.getElementById('rrent_'    + id).value) || 0;
+  var furniture  = parseFloat(document.getElementById('rfurn_'    + id).value) || 0;
+  var deposit    = parseFloat(document.getElementById('rdeposit_' + id).value) || 0;
+  var moveInDate = document.getElementById('rmovein_'  + id).value.trim();
+  var note       = document.getElementById('rnote_'    + id).value.trim();
+  var elecInit   = parseFloat(document.getElementById('relec_'    + id).value) || 0;
+  var waterInit  = parseFloat(document.getElementById('rwater_'   + id).value) || 0;
 
   var btn = document.getElementById('rsave_' + id);
   btn.disabled = true;
@@ -873,7 +934,11 @@ function saveRoomRow(roomId, id) {
 
       if (S.allRooms) {
         var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
-        if (rec) { rec.name = name; rec.rent = rent; rec.furniture = furniture; rec.elecInit = elecInit; rec.waterInit = waterInit; }
+        if (rec) {
+          rec.name = name; rec.phone = phone; rec.rent = rent; rec.furniture = furniture;
+          rec.deposit = deposit; rec.moveInDate = moveInDate; rec.note = note;
+          rec.elecInit = elecInit; rec.waterInit = waterInit;
+        }
         renderRoomsTab(S.allRooms);
       }
       showMsg('rooms-msg', 'อัปเดตห้อง ' + roomId + ' สำเร็จ', 'success');
@@ -883,44 +948,114 @@ function saveRoomRow(roomId, id) {
       btn.innerHTML = 'บันทึก';
       showMsg('rooms-msg', 'อัปเดตไม่สำเร็จ: ' + err.message, 'error');
     })
-    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture, elecInit: elecInit, waterInit: waterInit });
+    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture, elecInit: elecInit, waterInit: waterInit, phone: phone, deposit: deposit, moveInDate: moveInDate, note: note });
 }
 
 function startCheckOut(roomId, id) {
+  _coRoomId = roomId;
+  _coId     = id;
+  _coInfo   = null;
+  document.getElementById('co-d1name').value = '';
+  document.getElementById('co-d1amt').value  = '';
+  document.getElementById('co-d2name').value = '';
+  document.getElementById('co-d2amt').value  = '';
+  document.getElementById('co-msg').style.display  = 'none';
+  document.getElementById('co-result').innerHTML   = '';
+  document.getElementById('co-meta').innerHTML     = 'กำลังโหลด...';
+  document.getElementById('co-body').innerHTML     = '';
+  document.getElementById('co-btn-confirm').disabled = true;
+  document.getElementById('modal-checkout').hidden = false;
+
   google.script.run
-    .withSuccessHandler(function(result) {
-      var msg = 'ยืนยันย้ายออก ห้อง ' + roomId + '?\nชื่อผู้เช่า, ค่าเช่า และค่าเฟอร์นิเจอร์จะถูกล้าง';
-      if (result.outstanding > 0) {
-        msg = 'ห้อง ' + roomId + ' มียอดค้าง ' + fmt(result.outstanding) + ' บาท\n\n' + msg;
-      }
-      if (!confirm(msg)) return;
-      doCheckOut(roomId, id);
+    .withSuccessHandler(function(info) {
+      _coInfo = info;
+      document.getElementById('co-meta').innerHTML =
+        'ห้อง <strong>' + escHtml(roomId) + '</strong>'
+        + (info.name      ? ' · ' + escHtml(info.name)      : '')
+        + (info.phone     ? ' · ' + escHtml(info.phone)     : '')
+        + (info.moveInDate ? '<br>วันย้ายเข้า: ' + escHtml(info.moveInDate) : '');
+      document.getElementById('co-body').innerHTML =
+        '<div class="bill-row"><span class="blbl">เงินมัดจำ</span><span class="bval">' + fmtB(info.deposit) + '</span></div>'
+        + '<div class="bill-row"><span class="blbl">ยอดค้างทั้งหมด</span><span class="bval" style="color:#e74c3c">' + fmtB(info.outstanding) + '</span></div>';
+      document.getElementById('co-btn-confirm').disabled = false;
+      recalcCheckOut();
     })
     .withFailureHandler(function(err) {
-      showMsg('rooms-msg', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+      document.getElementById('co-meta').innerHTML = '';
+      document.getElementById('co-body').innerHTML = '<div class="alert error">เกิดข้อผิดพลาด: ' + escHtml(err.message) + '</div>';
     })
-    .getOutstandingBalance(roomId);
+    .getCheckOutInfo(roomId);
 }
 
-function doCheckOut(roomId, id) {
-  var btn = document.getElementById('rout_' + id);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+function recalcCheckOut() {
+  if (!_coInfo) return;
+  var d1     = parseFloat(document.getElementById('co-d1amt').value) || 0;
+  var d2     = parseFloat(document.getElementById('co-d2amt').value) || 0;
+  var refund = _coInfo.deposit - _coInfo.outstanding - d1 - d2;
+  var color  = refund >= 0 ? '#27ae60' : '#e74c3c';
+  var label  = refund >= 0 ? 'ยอดคืนเงินมัดจำ' : 'ยอดขาด';
+  document.getElementById('co-result').innerHTML =
+    '<span>' + label + '</span><span style="color:' + color + '">' + fmtB(Math.abs(refund)) + '</span>';
+}
 
+['co-d1amt','co-d2amt'].forEach(function(elId) {
+  document.getElementById(elId).addEventListener('input', recalcCheckOut);
+});
+
+document.getElementById('co-btn-confirm').addEventListener('click', function() {
+  if (!_coRoomId || !_coInfo) return;
+  var d1Name = document.getElementById('co-d1name').value.trim();
+  var d1Amt  = parseFloat(document.getElementById('co-d1amt').value)  || 0;
+  var d2Name = document.getElementById('co-d2name').value.trim();
+  var d2Amt  = parseFloat(document.getElementById('co-d2amt').value)  || 0;
+
+  var btn = document.getElementById('co-btn-confirm');
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...';
+  document.getElementById('co-msg').style.display = 'none';
+
+  var roomId = _coRoomId;
   google.script.run
-    .withSuccessHandler(function() {
+    .withSuccessHandler(function(res) {
+      document.getElementById('modal-checkout').hidden = true;
+      btn.disabled  = false;
+      btn.innerHTML = 'ยืนยันย้ายออก';
       if (S.allRooms) {
         var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
-        if (rec) { rec.name = ''; rec.rent = 0; rec.furniture = 0; }
+        if (rec) {
+          rec.name = ''; rec.rent = 0; rec.furniture = 0;
+          rec.phone = ''; rec.deposit = 0; rec.moveInDate = '';
+        }
+        renderRoomsTab(S.allRooms);
       }
-      renderRoomsTab(S.allRooms);
-      showMsg('rooms-msg', 'ห้อง ' + roomId + ' ย้ายออกเรียบร้อย', 'success');
+      var refundMsg = res.refund >= 0
+        ? 'คืนเงิน ' + fmt(res.refund) + ' บาท'
+        : 'ขาด ' + fmt(Math.abs(res.refund)) + ' บาท';
+      showMsg('rooms-msg', 'ห้อง ' + roomId + ' ย้ายออกเรียบร้อย · ' + refundMsg, 'success');
+      _coRoomId = null; _coId = null; _coInfo = null;
     })
     .withFailureHandler(function(err) {
-      if (btn) { btn.disabled = false; btn.innerHTML = 'ย้ายออก'; }
-      showMsg('rooms-msg', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+      btn.disabled  = false;
+      btn.innerHTML = 'ยืนยันย้ายออก';
+      var msg = document.getElementById('co-msg');
+      msg.textContent   = 'เกิดข้อผิดพลาด: ' + err.message;
+      msg.className     = 'alert error';
+      msg.style.display = 'block';
     })
-    .checkOutRoom(roomId);
-}
+    .checkOutRoom(roomId, { deduct1Name: d1Name, deduct1Amount: d1Amt, deduct2Name: d2Name, deduct2Amount: d2Amt });
+});
+
+document.getElementById('co-btn-cancel').addEventListener('click', function() {
+  document.getElementById('modal-checkout').hidden = true;
+  _coRoomId = null; _coId = null; _coInfo = null;
+});
+
+document.getElementById('modal-checkout').addEventListener('click', function(e) {
+  if (e.target === this) {
+    document.getElementById('modal-checkout').hidden = true;
+    _coRoomId = null; _coId = null; _coInfo = null;
+  }
+});
 
 // ──────────────────────────────────────────
 // Bill Modal

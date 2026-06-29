@@ -1,6 +1,6 @@
 # Plan: Checkout Flow + Tenant History + Room Fields
 
-## สถานะ: Session 1 ✓ | Session 2 ✓ (Session 3 พร้อมทำ)
+## สถานะ: Session 1 ✓ | Session 2 ✓ | Session 3 ✓ (ครบทุก Session)
 
 ---
 
