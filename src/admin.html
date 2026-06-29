@@ -465,6 +465,58 @@
 </div>
 
 <!-- ════════════════════════════════════
+     CHECKIN MODAL
+════════════════════════════════════ -->
+<div id="modal-checkin" hidden>
+  <div class="modal-box">
+    <div class="bill-header">
+      <div class="bill-title">ย้ายเข้า</div>
+      <div id="ci-meta" class="bill-meta"></div>
+    </div>
+    <hr class="bill-dashed">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">ชื่อผู้เช่า <span style="color:#e74c3c">*</span></label>
+        <input id="ci-name" placeholder="ชื่อ-นามสกุล" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">เบอร์โทร</label>
+        <input id="ci-phone" placeholder="0xx-xxx-xxxx" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">วันย้ายเข้า</label>
+        <input id="ci-movein" placeholder="dd/MM/yyyy" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">ค่าเช่า (บาท)</label>
+        <input id="ci-rent" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">ค่าเฟอร์นิเจอร์ (บาท)</label>
+        <input id="ci-furn" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">เงินมัดจำ (บาท)</label>
+        <input id="ci-deposit" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">มิเตอร์ไฟเริ่มต้น</label>
+        <input id="ci-elec" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#555;display:block;margin-bottom:3px">มิเตอร์น้ำเริ่มต้น</label>
+        <input id="ci-water" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem">
+      </div>
+    </div>
+    <div id="ci-msg" class="alert" style="display:none;margin-top:12px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button id="ci-btn-confirm" class="btn btn-primary" style="flex:1">ยืนยันย้ายเข้า</button>
+      <button id="ci-btn-cancel"  class="btn btn-ghost">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
      SCRIPT
 ════════════════════════════════════ -->
 <script>
@@ -486,6 +538,10 @@ var _billingData = [];
 var _coRoomId = null;
 var _coId     = null;
 var _coInfo   = null;
+
+// Checkin modal state
+var _ciRoomId = null;
+var _ciId     = null;
 
 function currentMonthYear() {
   var d = new Date();
@@ -906,6 +962,7 @@ function renderRoomRows(rooms, prefix) {
       + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
       + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button>'
       + (!isVacant ? '<button class="btn btn-danger btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
+      + (isVacant  ? '<button class="btn btn-primary btn-sm" id="rin_' + id + '" onclick="startCheckIn(\'' + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
       + '</div>'
       + '</div>';
   }).join('');
@@ -1054,6 +1111,99 @@ document.getElementById('modal-checkout').addEventListener('click', function(e) 
   if (e.target === this) {
     document.getElementById('modal-checkout').hidden = true;
     _coRoomId = null; _coId = null; _coInfo = null;
+  }
+});
+
+// ──────────────────────────────────────────
+// Checkin Modal
+// ──────────────────────────────────────────
+function _todayThai() {
+  var d = new Date();
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  return dd + '/' + mm + '/' + d.getFullYear();
+}
+
+function startCheckIn(roomId, id) {
+  _ciRoomId = roomId;
+  _ciId     = id;
+  document.getElementById('ci-meta').innerHTML = 'ห้อง <strong>' + escHtml(roomId) + '</strong>';
+  document.getElementById('ci-name').value    = '';
+  document.getElementById('ci-phone').value   = '';
+  document.getElementById('ci-movein').value  = _todayThai();
+  document.getElementById('ci-rent').value    = '';
+  document.getElementById('ci-furn').value    = '';
+  document.getElementById('ci-deposit').value = '';
+  document.getElementById('ci-elec').value    = '';
+  document.getElementById('ci-water').value   = '';
+  document.getElementById('ci-msg').style.display = 'none';
+  document.getElementById('modal-checkin').hidden = false;
+  document.getElementById('ci-name').focus();
+}
+
+document.getElementById('ci-btn-confirm').addEventListener('click', function() {
+  var name      = document.getElementById('ci-name').value.trim();
+  if (!name) {
+    var msg = document.getElementById('ci-msg');
+    msg.textContent   = 'กรุณากรอกชื่อผู้เช่า';
+    msg.className     = 'alert error';
+    msg.style.display = 'block';
+    document.getElementById('ci-name').focus();
+    return;
+  }
+  var phone     = document.getElementById('ci-phone').value.trim();
+  var moveInDate = document.getElementById('ci-movein').value.trim();
+  var rent      = parseFloat(document.getElementById('ci-rent').value)    || 0;
+  var furniture = parseFloat(document.getElementById('ci-furn').value)    || 0;
+  var deposit   = parseFloat(document.getElementById('ci-deposit').value) || 0;
+  var elecInit  = parseFloat(document.getElementById('ci-elec').value)    || 0;
+  var waterInit = parseFloat(document.getElementById('ci-water').value)   || 0;
+
+  var btn = document.getElementById('ci-btn-confirm');
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...';
+  document.getElementById('ci-msg').style.display = 'none';
+
+  var roomId = _ciRoomId;
+  google.script.run
+    .withSuccessHandler(function() {
+      document.getElementById('modal-checkin').hidden = true;
+      btn.disabled  = false;
+      btn.innerHTML = 'ยืนยันย้ายเข้า';
+      if (S.allRooms) {
+        var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
+        if (rec) {
+          rec.name = name; rec.phone = phone; rec.moveInDate = moveInDate;
+          rec.rent = rent; rec.furniture = furniture; rec.deposit = deposit;
+          rec.elecInit = elecInit; rec.waterInit = waterInit;
+        }
+        renderRoomsTab(S.allRooms);
+      }
+      showMsg('rooms-msg', 'ห้อง ' + roomId + ' ย้ายเข้าเรียบร้อย · ' + escHtml(name), 'success');
+      _ciRoomId = null; _ciId = null;
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled  = false;
+      btn.innerHTML = 'ยืนยันย้ายเข้า';
+      var msg = document.getElementById('ci-msg');
+      msg.textContent   = 'เกิดข้อผิดพลาด: ' + err.message;
+      msg.className     = 'alert error';
+      msg.style.display = 'block';
+    })
+    .updateRoomInfo(roomId, { name: name, phone: phone, moveInDate: moveInDate,
+      rent: rent, furniture: furniture, deposit: deposit,
+      elecInit: elecInit, waterInit: waterInit });
+});
+
+document.getElementById('ci-btn-cancel').addEventListener('click', function() {
+  document.getElementById('modal-checkin').hidden = true;
+  _ciRoomId = null; _ciId = null;
+});
+
+document.getElementById('modal-checkin').addEventListener('click', function(e) {
+  if (e.target === this) {
+    document.getElementById('modal-checkin').hidden = true;
+    _ciRoomId = null; _ciId = null;
   }
 });
 

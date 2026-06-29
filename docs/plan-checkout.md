@@ -1,6 +1,6 @@
 # Plan: Checkout Flow + Tenant History + Room Fields
 
-## สถานะ: Session 1 ✓ | Session 2 ✓ | Session 3 ✓ (ครบทุก Session)
+## สถานะ: Session 1 ✓ | Session 2 ✓ | Session 3 ✓ | Session 4 ✓
 
 ---
 
@@ -255,6 +255,41 @@ JS — แทน `startCheckOut()`:
 - success → ปิด modal + re-render rooms
 
 **เมื่อเสร็จ:** clasp push + commit `feat: admin — checkout modal + room grid tenant fields`
+
+---
+
+### Session 4 — Check-in Modal (ย้ายเข้า)
+**ไฟล์:** `src/admin.html` เท่านั้น
+**Backend:** ไม่ต้องแก้ — `updateRoomInfo()` รองรับทุก field แล้ว
+
+**งาน:**
+
+1. `renderRoomRows()` — เพิ่มปุ่ม "ย้ายเข้า" สำหรับ `isVacant === true`:
+   ```javascript
+   + (isVacant ? '<button class="btn btn-primary btn-sm" id="rin_' + id + '" onclick="startCheckIn(\'' + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
+   ```
+
+2. เพิ่ม HTML `#modal-checkin` (คล้าย `#modal-checkout`):
+   - Fields: ชื่อผู้เช่า (required), เบอร์โทร, ค่าเช่า, เฟอร์นิเจอร์, มัดจำ, วันย้ายเข้า (default today), ไฟเริ่มต้น, น้ำเริ่มต้น
+   - ปุ่ม "ยืนยันย้ายเข้า" + "ยกเลิก"
+
+3. เพิ่ม state variables: `var _ciRoomId = null; var _ciId = null;`
+
+4. เพิ่ม `startCheckIn(roomId, id)`:
+   - set `_ciRoomId`, `_ciId`
+   - กรอก default วันย้ายเข้า = today (format `dd/MM/yyyy`)
+   - reset fields อื่นๆ
+   - เปิด `#modal-checkin`
+
+5. Confirm handler:
+   - validate ชื่อผู้เช่าต้องไม่ว่าง
+   - เรียก `updateRoomInfo(roomId, { name, phone, rent, furniture, deposit, moveInDate, elecInit, waterInit })`
+   - success → อัปเดต `S.allRooms` + `renderRoomsTab()`
+   - แสดง success message "ห้อง X ย้ายเข้าเรียบร้อย"
+
+6. Cancel + backdrop click → ปิด modal + clear state
+
+**เมื่อเสร็จ:** clasp push + commit `feat: admin — check-in modal (ย้ายเข้า)`
 
 ---
 

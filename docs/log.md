@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-06-29 (6)
+
+### feat: admin — check-in modal ย้ายเข้า (Session 4)
+
+**การเปลี่ยนแปลง**:
+- `renderRoomRows()`: เพิ่มปุ่ม "ย้ายเข้า" (btn-primary) สำหรับ `isVacant === true` (ก่อนหน้านี้ห้องว่างไม่มีปุ่มเลย)
+- HTML `#modal-checkin`: fields ชื่อผู้เช่า*, เบอร์โทร, วันย้ายเข้า, ค่าเช่า, เฟอร์, มัดจำ, ไฟเริ่มต้น, น้ำเริ่มต้น
+- `_ciRoomId`, `_ciId` state variables
+- `startCheckIn(roomId, id)`: reset fields, วันย้ายเข้า default = today (dd/MM/yyyy), เปิด modal
+- `ci-btn-confirm` handler: validate ชื่อต้องไม่ว่าง → เรียก `updateRoomInfo()` → อัปเดต `S.allRooms` + re-render
+- Cancel + backdrop click → ปิด modal + clear state
+- Backend ไม่มีการเปลี่ยนแปลง (ใช้ `updateRoomInfo()` ที่มีอยู่แล้ว)
+
+---
+
 ## 2026-06-29 (5)
 
 ### feat: admin — checkout modal + room grid tenant fields (Session 3)
