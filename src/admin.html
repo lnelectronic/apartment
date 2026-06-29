@@ -565,7 +565,8 @@
 var S = {
   monthYear: currentMonthYear(),
   dashData:  null,
-  allRooms:  null
+  allRooms:  null,
+  role:      'owner'
 };
 
 // Data stores to avoid JSON-in-HTML
@@ -596,14 +597,25 @@ var _staffPageUrl = '<?= appUrl ?>?page=staff';
 // Session
 // ──────────────────────────────────────────
 (function init() {
-  if (sessionStorage.getItem('admin_auth') === '1') showAdmin();
+  if (sessionStorage.getItem('admin_auth') === '1') {
+    S.role = sessionStorage.getItem('admin_role') || 'owner';
+    showAdmin();
+  }
 })();
 
 function showAdmin() {
   document.getElementById('sect-login').hidden = true;
   document.getElementById('sect-admin').hidden = false;
+  applyRole(S.role);
   updateMonthLabel();
-  loadDashboard();
+  if (S.role === 'owner') loadDashboard();
+}
+
+function applyRole(role) {
+  var isStaff = role === 'staff';
+  document.querySelector('.nav-btn[data-tab="dashboard"]').hidden = isStaff;
+  document.querySelector('.nav-btn[data-tab="meter"]').hidden     = isStaff;
+  if (isStaff) switchTab('billing');
 }
 
 // ──────────────────────────────────────────
@@ -621,10 +633,12 @@ document.getElementById('btn-login').addEventListener('click', function() {
   clearEl('msg-login');
 
   google.script.run
-    .withSuccessHandler(function(ok) {
+    .withSuccessHandler(function(result) {
       setLoading('btn-login', false, 'เข้าสู่ระบบ');
-      if (ok) {
+      if (result.ok) {
+        S.role = result.role;
         sessionStorage.setItem('admin_auth', '1');
+        sessionStorage.setItem('admin_role', result.role);
         showAdmin();
       } else {
         showLoginMsg('รหัสผ่านไม่ถูกต้อง', 'error');
@@ -634,17 +648,21 @@ document.getElementById('btn-login').addEventListener('click', function() {
       setLoading('btn-login', false, 'เข้าสู่ระบบ');
       showLoginMsg('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .checkPassword(pw);
+    .checkAdminLogin(pw);
 });
 
 document.getElementById('btn-logout').addEventListener('click', function() {
   sessionStorage.removeItem('admin_auth');
+  sessionStorage.removeItem('admin_role');
+  S.role     = 'owner';
+  S.dashData = null;
+  S.allRooms = null;
   document.getElementById('sect-admin').hidden = true;
   document.getElementById('sect-login').hidden = false;
   document.getElementById('input-pw').value = '';
   clearEl('msg-login');
-  S.dashData = null;
-  S.allRooms = null;
+  // reset nav visibility
+  document.querySelectorAll('.nav-btn').forEach(function(b) { b.hidden = false; });
 });
 
 function showLoginMsg(text, type) {
@@ -1032,39 +1050,59 @@ function renderRoomsTab(rooms) {
 
 function renderRoomRows(rooms, prefix) {
   if (!rooms.length) return '<tr><td colspan="8" style="color:#aaa;text-align:center;padding:20px">ไม่มีห้อง</td></tr>';
+  var isStaff = S.role === 'staff';
+  var roStyle = 'background:#f5f5f5;color:#999;cursor:not-allowed';
   return rooms.map(function(r, i) {
     var id = prefix + i;
     var isVacant = !r.name;
+    var rentCell    = isStaff
+      ? '<td><input class="num-input" type="number" value="' + (r.rent || 0) + '" readonly style="' + roStyle + '"></td>'
+      : '<td><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0"></td>';
+    var furnCell    = isStaff
+      ? '<td><input class="num-input" type="number" value="' + (r.furniture || 0) + '" readonly style="' + roStyle + '"></td>'
+      : '<td><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0"></td>';
+    var depositCell = isStaff
+      ? '<td><input class="num-input" type="number" value="' + (r.deposit || 0) + '" readonly style="' + roStyle + '"></td>'
+      : '<td><input class="num-input" type="number" id="rdeposit_' + id + '" value="' + (r.deposit || 0) + '" min="0"></td>';
+    var moveinCell  = isStaff
+      ? '<td><input class="txt-sm" type="text" value="' + escHtml(r.moveInDate || '') + '" readonly style="' + roStyle + ';width:100px"></td>'
+      : '<td><input class="txt-sm" type="text" id="rmovein_' + id + '" value="' + escHtml(r.moveInDate || '') + '" placeholder="dd/MM/yyyy" style="width:100px"></td>';
+    var actionCell  = isStaff
+      ? '<td><button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button></td>'
+      : '<td style="white-space:nowrap">'
+        + '<button class="btn-icon" title="ตั้งค่า/Note/มิเตอร์" onclick="startRoomSettings(\'' + r.roomId + '\',\'' + id + '\')">⚙</button>'
+        + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button> '
+        + (!isVacant ? '<button class="btn btn-danger  btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
+        + (isVacant  ? '<button class="btn btn-primary btn-sm" id="rin_'  + id + '" onclick="startCheckIn(\''  + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
+        + '</td>';
     return '<tr id="rdiv_' + id + '">'
       + '<td><span class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</span></td>'
       + '<td><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า" style="min-width:120px"></td>'
       + '<td><input class="txt-sm" type="text" id="rphone_' + id + '" value="' + escHtml(r.phone || '') + '" placeholder="เบอร์โทร" style="width:110px"></td>'
-      + '<td><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0"></td>'
-      + '<td><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0"></td>'
-      + '<td><input class="num-input" type="number" id="rdeposit_' + id + '" value="' + (r.deposit || 0) + '" min="0"></td>'
-      + '<td><input class="txt-sm" type="text" id="rmovein_' + id + '" value="' + escHtml(r.moveInDate || '') + '" placeholder="dd/MM/yyyy" style="width:100px"></td>'
-      + '<td style="white-space:nowrap">'
-      + '<button class="btn-icon" title="ตั้งค่า/Note/มิเตอร์" onclick="startRoomSettings(\'' + r.roomId + '\',\'' + id + '\')">⚙</button>'
-      + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button> '
-      + (!isVacant ? '<button class="btn btn-danger  btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
-      + (isVacant  ? '<button class="btn btn-primary btn-sm" id="rin_'  + id + '" onclick="startCheckIn(\''  + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
-      + '</td>'
+      + rentCell + furnCell + depositCell + moveinCell + actionCell
       + '</tr>';
   }).join('');
 }
 
 function saveRoomRow(roomId, id) {
-  var name       = document.getElementById('rname_'    + id).value.trim();
-  var phone      = document.getElementById('rphone_'   + id).value.trim();
-  var rent       = parseFloat(document.getElementById('rrent_'    + id).value) || 0;
-  var furniture  = parseFloat(document.getElementById('rfurn_'    + id).value) || 0;
-  var deposit    = parseFloat(document.getElementById('rdeposit_' + id).value) || 0;
-  var moveInDate = document.getElementById('rmovein_'  + id).value.trim();
-  // note/elecInit/waterInit ดึงจาก allRooms cache (แก้ผ่าน settings modal แยก)
-  var rec        = S.allRooms ? S.allRooms.filter(function(r) { return r.roomId === roomId; })[0] : null;
-  var note       = rec ? (rec.note      || '') : '';
-  var elecInit   = rec ? (rec.elecInit  || 0)  : 0;
-  var waterInit  = rec ? (rec.waterInit || 0)  : 0;
+  var name  = document.getElementById('rname_'  + id).value.trim();
+  var phone = document.getElementById('rphone_' + id).value.trim();
+  var rec   = S.allRooms ? S.allRooms.filter(function(r) { return r.roomId === roomId; })[0] : null;
+
+  var info;
+  if (S.role === 'staff') {
+    info = { name: name, phone: phone };
+  } else {
+    var rent       = parseFloat(document.getElementById('rrent_'    + id).value) || 0;
+    var furniture  = parseFloat(document.getElementById('rfurn_'    + id).value) || 0;
+    var deposit    = parseFloat(document.getElementById('rdeposit_' + id).value) || 0;
+    var moveInDate = document.getElementById('rmovein_' + id).value.trim();
+    // note/elecInit/waterInit ดึงจาก allRooms cache (แก้ผ่าน settings modal แยก)
+    var note      = rec ? (rec.note      || '') : '';
+    var elecInit  = rec ? (rec.elecInit  || 0)  : 0;
+    var waterInit = rec ? (rec.waterInit || 0)  : 0;
+    info = { name: name, phone: phone, rent: rent, furniture: furniture, elecInit: elecInit, waterInit: waterInit, deposit: deposit, moveInDate: moveInDate, note: note };
+  }
 
   var btn = document.getElementById('rsave_' + id);
   btn.disabled = true;
@@ -1075,16 +1113,8 @@ function saveRoomRow(roomId, id) {
     .withSuccessHandler(function() {
       btn.disabled = false;
       btn.innerHTML = 'บันทึก';
-
-      if (S.allRooms) {
-        var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
-        if (rec) {
-          rec.name = name; rec.phone = phone; rec.rent = rent; rec.furniture = furniture;
-          rec.deposit = deposit; rec.moveInDate = moveInDate; rec.note = note;
-          rec.elecInit = elecInit; rec.waterInit = waterInit;
-        }
-        renderRoomsTab(S.allRooms);
-      }
+      if (rec) { rec.name = name; rec.phone = phone; }
+      if (S.allRooms) renderRoomsTab(S.allRooms);
       showMsg('rooms-msg', 'อัปเดตห้อง ' + roomId + ' สำเร็จ', 'success');
     })
     .withFailureHandler(function(err) {
@@ -1092,7 +1122,7 @@ function saveRoomRow(roomId, id) {
       btn.innerHTML = 'บันทึก';
       showMsg('rooms-msg', 'อัปเดตไม่สำเร็จ: ' + err.message, 'error');
     })
-    .updateRoomInfo(roomId, { name: name, rent: rent, furniture: furniture, elecInit: elecInit, waterInit: waterInit, phone: phone, deposit: deposit, moveInDate: moveInDate, note: note });
+    .updateRoomInfo(roomId, info);
 }
 
 function startCheckOut(roomId, id) {

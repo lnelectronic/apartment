@@ -10,12 +10,31 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-// เรียกจาก admin.html: google.script.run.checkPassword(pw)
+// เรียกจาก admin.html: google.script.run.checkPassword(pw) — คง backward-compat ไว้
 // Script Properties: OWNER_PASSWORD (ใหม่) หรือ ADMIN_PASSWORD (fallback เดิม)
 function checkPassword(pw) {
   var props = PropertiesService.getScriptProperties();
   var ownerPw = props.getProperty('OWNER_PASSWORD') || props.getProperty('ADMIN_PASSWORD');
   return pw === ownerPw;
+}
+
+// เรียกจาก admin.html: google.script.run.checkAdminLogin(pw)
+// คืน {ok: true, role: 'owner'|'staff'} หรือ {ok: false}
+function checkAdminLogin(pw) {
+  var props   = PropertiesService.getScriptProperties();
+  var ownerPw = props.getProperty('OWNER_PASSWORD') || props.getProperty('ADMIN_PASSWORD');
+  if (pw === ownerPw) return { ok: true, role: 'owner' };
+
+  var list = props.getProperty('STAFF_PASSWORDS');
+  if (list) {
+    var parsed;
+    try { parsed = JSON.parse(list); } catch (e) { parsed = null; }
+    if (Array.isArray(parsed) && parsed.indexOf(pw) !== -1) return { ok: true, role: 'staff' };
+  } else if (pw === props.getProperty('STAFF_PASSWORD')) {
+    return { ok: true, role: 'staff' };
+  }
+
+  return { ok: false };
 }
 
 // เรียกจาก staff.html: google.script.run.checkStaffPassword(pw)
