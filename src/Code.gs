@@ -20,10 +20,19 @@ function checkPassword(pw) {
 
 // เรียกจาก admin.html: google.script.run.checkAdminLogin(pw)
 // คืน {ok: true, role: 'owner'|'staff'} หรือ {ok: false}
+// Script Properties: OWNER_PASSWORDS = JSON array เช่น ["pass1","pass2"] หรือ OWNER_PASSWORD = "pass1" (key เดียว)
 function checkAdminLogin(pw) {
-  var props   = PropertiesService.getScriptProperties();
-  var ownerPw = props.getProperty('OWNER_PASSWORD') || props.getProperty('ADMIN_PASSWORD');
-  if (pw === ownerPw) return { ok: true, role: 'owner' };
+  var props = PropertiesService.getScriptProperties();
+
+  var ownerList = props.getProperty('OWNER_PASSWORDS');
+  if (ownerList) {
+    var parsedOwner;
+    try { parsedOwner = JSON.parse(ownerList); } catch (e) { parsedOwner = null; }
+    if (Array.isArray(parsedOwner) && parsedOwner.indexOf(pw) !== -1) return { ok: true, role: 'owner' };
+  } else {
+    var ownerPw = props.getProperty('OWNER_PASSWORD') || props.getProperty('ADMIN_PASSWORD');
+    if (pw === ownerPw) return { ok: true, role: 'owner' };
+  }
 
   var list = props.getProperty('STAFF_PASSWORDS');
   if (list) {
