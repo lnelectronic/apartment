@@ -4,6 +4,44 @@
 
 ---
 
+## 2026-06-29 (10)
+
+### feat: Batch Meter Entry UI (Session 4 — plan-batch-meter)
+
+**การเปลี่ยนแปลง**:
+- `DataService.gs`:
+  - `getAllRoomsWithPrevMeter(monthStr, meterType, building)` (ใหม่): ดึงห้องทั้งหมดในตึง `building` ('C'|'R') กรอง `room[0]`, คืน `{rooms, rates}` — แต่ละห้องมี `prevMeter` (ค่าถึงเดือนก่อน หรือ init fallback), `existingEnd` (ถ้าจดประเภทนั้นไปแล้วเดือนนี้), `isEmpty`
+  - `saveBatchMeters(records, meterType)` (ใหม่): loop เรียก `saveRecord()` ทุก record คืน `{saved}`
+
+- `staff.html`:
+  - แทนที่ `sect-batch` placeholder ด้วย 4 sub-steps: select / table / review / done
+  - **Step 1 (select)**: 4 ปุ่ม — "ตึง C ⚡ ไฟ" / "ตึง C 💧 น้ำ" / "ตึง R ⚡ ไฟ" / "ตึง R 💧 น้ำ"
+  - **Step 2 (table)**: โหลดห้องในตึงนั้น, แสดง scroll table (ห้อง | ผู้เช่า | เริ่ม | input ถึง); prefill `existingEnd` ถ้าจดไปแล้ว; ห้องว่าง label "(ว่าง)"
+  - **Step 3 (review)**: แสดงเฉพาะห้องที่กรอก พร้อม เริ่ม/ถึง/ใช้ไป/เป็นเงิน; ห้องว่างที่ใช้ > 0 → badge "⚠ ห้องว่าง" + highlight แดง
+  - **Step 4 (done)**: แสดงจำนวนห้องที่บันทึก
+  - `showBatchMode()`: เพิ่ม `showBatchStep('batch-step-select')` เพื่อ reset เมื่อกลับมา
+  - `B` state object สำหรับ batch (building, meterType, monthYear, rooms, rates, toSave)
+  - CSS: `.table-wrap { overflow-x: auto }` สำหรับ horizontal scroll บน mobile
+
+---
+
+## 2026-06-29 (9)
+
+### feat: Partial Meter Entry — mode toggle ไฟ/น้ำ/ทั้งคู่ ใน staff.html (Session 3 — plan-batch-meter)
+
+**การเปลี่ยนแปลง** (`src/staff.html`):
+- **Mode toggle**: เพิ่ม segmented control "ไฟ / น้ำ / ทั้งคู่" ใน sect-form ก่อน section มิเตอร์
+- **Show/hide**: wrap elec ใน `#sect-elec-fields` และ water ใน `#sect-water-fields`; `updateMeterSections()` hide/show ตาม `S.meterMode`
+- **Auto pre-select**: ถ้าแก้ไข `draft-elec` → pre-select "น้ำ"; `draft-water` → pre-select "ไฟ"; อื่นๆ → "ทั้งคู่"
+- **Validation**: validate เฉพาะ field ของ mode ที่เลือก
+- **Review screen**: partial mode แสดงเฉพาะ meter section ที่กรอก (ไม่แสดง ค่าเช่า/เฟอร์/รวม); title เปลี่ยนเป็น "ยืนยันบันทึกมิเตอร์ไฟ/น้ำ"; total label = "รวม (บันทึกแบบร่าง)"
+- **Save call**: ส่ง `S.meterMode` เป็น arg ที่ 2 ไป `saveRecord(S.saveData, S.meterMode)`
+- **bug fix**: waterAmount ใน preview ใช้ waterMin threshold (waterUsed < 6) ตรงกับ server แล้ว (เดิม client ใช้ `waterUsed × rate` ตรงๆ)
+
+**commit**: f5cf4d7
+
+---
+
 ## 2026-06-29 (8)
 
 ### feat: Data Model — Draft Meter Status, col 23 สถานะมิเตอร์ (Session 2 — plan-batch-meter)

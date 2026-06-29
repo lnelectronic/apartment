@@ -247,6 +247,9 @@
     .mode-btn:last-child { border-right: none; }
     .mode-btn.active { background: #0066cc; color: white; }
 
+    /* ─── Batch table ─── */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
     /* ─── Missing rooms ─── */
     .missing-card {
       background: white; border-radius: 12px;
@@ -301,13 +304,76 @@
 </div>
 
 <!-- ════════════════════════════════════════
-     BATCH PLACEHOLDER
+     BATCH FLOW
 ════════════════════════════════════════ -->
 <div id="sect-batch" hidden>
-  <div class="card text-center" style="max-width:480px;margin:0 auto">
-    <p style="color:#888;margin-bottom:24px;font-size:0.95rem">ฟีเจอร์นี้จะเปิดใช้งานเร็วๆ นี้</p>
-    <button id="btn-batch-back" class="btn btn-ghost">กลับเมนู</button>
+
+  <!-- Step 1: เลือก session -->
+  <div id="batch-step-select">
+    <div class="card" style="max-width:480px;margin:0 auto;padding:24px 20px">
+      <h2 style="margin-bottom:6px">จด batch ทุกห้อง</h2>
+      <p style="color:#888;font-size:0.9rem;margin-bottom:20px">เลือก session ที่ต้องการจด</p>
+      <button class="menu-btn primary batch-session-btn" data-building="C" data-type="elec">ตึง C &nbsp;&#x26A1; ไฟ</button>
+      <button class="menu-btn batch-session-btn"         data-building="C" data-type="water">ตึง C &nbsp;&#x1F4A7; น้ำ</button>
+      <button class="menu-btn batch-session-btn"         data-building="R" data-type="elec">ตึง R &nbsp;&#x26A1; ไฟ</button>
+      <button class="menu-btn batch-session-btn"         data-building="R" data-type="water">ตึง R &nbsp;&#x1F4A7; น้ำ</button>
+      <button id="btn-batch-back" class="btn btn-ghost" style="margin-top:8px">กลับเมนู</button>
+    </div>
   </div>
+
+  <!-- Step 2: ตาราง -->
+  <div id="batch-step-table" hidden>
+    <div style="max-width:600px;margin:0 auto">
+      <div class="card" style="padding:16px 20px">
+        <h2 id="batch-session-title" style="margin-bottom:4px"></h2>
+        <p id="batch-session-month" style="color:#888;font-size:0.9rem;margin-bottom:16px"></p>
+        <div id="msg-batch-load" class="msg"></div>
+        <div class="table-wrap">
+          <table id="batch-table" style="width:100%;border-collapse:collapse;min-width:340px">
+            <thead id="batch-thead"></thead>
+            <tbody id="batch-tbody">
+              <tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" id="btn-batch-submit"       style="margin-top:16px">ตรวจสอบยอด</button>
+        <button class="btn btn-ghost"   id="btn-batch-back-select"  style="margin-top:8px">เลือก session อื่น</button>
+        <div id="msg-batch-table" class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Review -->
+  <div id="batch-step-review" hidden>
+    <div style="max-width:600px;margin:0 auto">
+      <div class="card" style="padding:16px 20px">
+        <h2 style="margin-bottom:4px">ตรวจสอบก่อนบันทึก</h2>
+        <p id="batch-review-subtitle" style="color:#888;font-size:0.9rem;margin-bottom:8px"></p>
+        <div id="batch-review-warn" class="msg"></div>
+        <div class="table-wrap">
+          <table id="batch-review-table" style="width:100%;border-collapse:collapse;min-width:380px">
+            <thead id="batch-review-thead"></thead>
+            <tbody id="batch-review-tbody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-success" id="btn-batch-confirm"    style="margin-top:16px">ยืนยันบันทึก</button>
+        <button class="btn btn-ghost"   id="btn-batch-back-table" style="margin-top:8px">แก้ไข</button>
+        <div id="msg-batch-confirm" class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Done -->
+  <div id="batch-step-done" hidden>
+    <div class="card text-center" style="max-width:480px;margin:0 auto">
+      <div class="success-circle">&#10003;</div>
+      <h2>บันทึกสำเร็จ!</h2>
+      <p id="batch-done-msg" style="color:#555;margin:8px 0 24px"></p>
+      <button class="btn btn-primary" id="btn-batch-done-new">จด session อื่น</button>
+      <button class="btn btn-ghost"   id="btn-batch-done-menu" style="margin-top:8px">กลับเมนู</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ════════ ห้องที่ยังไม่ได้จด ════════ -->
@@ -547,6 +613,7 @@ function showSingleMode() {
 function showBatchMode() {
   _hideAll();
   document.getElementById('sect-batch').hidden = false;
+  showBatchStep('batch-step-select');
 }
 
 function updateMeterSections() {
@@ -601,6 +668,190 @@ document.getElementById('btn-staff-login').addEventListener('click', function() 
 document.getElementById('btn-mode-single').addEventListener('click', showSingleMode);
 document.getElementById('btn-mode-batch').addEventListener('click', showBatchMode);
 document.getElementById('btn-batch-back').addEventListener('click', showMenu);
+
+// ──────────────────────────────────────────
+// BATCH FLOW
+// ──────────────────────────────────────────
+var B = { building: '', meterType: '', monthYear: '', rooms: [], rates: null, toSave: [] };
+var BATCH_STEPS = ['batch-step-select','batch-step-table','batch-step-review','batch-step-done'];
+
+function showBatchStep(id) {
+  BATCH_STEPS.forEach(function(s) { document.getElementById(s).hidden = (s !== id); });
+}
+
+document.getElementById('btn-batch-back-select').addEventListener('click', function() {
+  showBatchStep('batch-step-select');
+});
+document.getElementById('btn-batch-back-table').addEventListener('click', function() {
+  showBatchStep('batch-step-table');
+});
+document.getElementById('btn-batch-done-new').addEventListener('click', function() {
+  showBatchStep('batch-step-select');
+});
+document.getElementById('btn-batch-done-menu').addEventListener('click', showMenu);
+
+document.querySelectorAll('.batch-session-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    B.building  = this.dataset.building;
+    B.meterType = this.dataset.type;
+    B.monthYear = currentMonthYear();
+    loadBatchTable();
+  });
+});
+
+function loadBatchTable() {
+  var typeLabel = B.meterType === 'elec' ? '&#x26A1; ไฟ' : '&#x1F4A7; น้ำ';
+  document.getElementById('batch-session-title').innerHTML = 'ตึง ' + B.building + ' — ' + typeLabel;
+  document.getElementById('batch-session-month').textContent = 'เดือน ' + B.monthYear;
+  clearMsg('msg-batch-load');
+  clearMsg('msg-batch-table');
+  document.getElementById('batch-thead').innerHTML = '';
+  document.getElementById('batch-tbody').innerHTML =
+    '<tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa">กำลังโหลด...</td></tr>';
+  showBatchStep('batch-step-table');
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      B.rooms = result.rooms;
+      B.rates = result.rates;
+      renderBatchTable();
+    })
+    .withFailureHandler(function(err) {
+      showMsg('msg-batch-load', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getAllRoomsWithPrevMeter(B.monthYear, B.meterType, B.building);
+}
+
+function renderBatchTable() {
+  var typeLabel = B.meterType === 'elec' ? 'ไฟ' : 'น้ำ';
+  document.getElementById('batch-thead').innerHTML =
+    '<tr>'
+    + '<th style="text-align:left;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ห้อง</th>'
+    + '<th style="text-align:left;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ผู้เช่า</th>'
+    + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">เริ่ม</th>'
+    + '<th style="text-align:center;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ถึง (' + typeLabel + ')</th>'
+    + '</tr>';
+
+  document.getElementById('batch-tbody').innerHTML = B.rooms.map(function(room, idx) {
+    var inputId = 'batch-end-' + idx;
+    var prefill = room.existingEnd !== null ? room.existingEnd : '';
+    var nameCell = room.isEmpty
+      ? '<span style="color:#aaa;font-style:italic">(ว่าง)</span>'
+      : room.tenantName;
+    return '<tr style="border-bottom:1px solid #f0f0f0">'
+      + '<td style="padding:8px 6px;font-weight:600;white-space:nowrap">' + room.room + '</td>'
+      + '<td style="padding:8px 6px;font-size:0.9rem;color:#333;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + nameCell + '</td>'
+      + '<td style="padding:8px 6px;text-align:right;color:#666;white-space:nowrap">' + room.prevMeter + '</td>'
+      + '<td style="padding:4px 6px;white-space:nowrap">'
+      +   '<input type="number" id="' + inputId + '" min="0" placeholder="—"'
+      +     ' style="width:80px;padding:8px 6px;font-size:1rem;border:2px solid #ddd;border-radius:6px;font-family:inherit;text-align:right"'
+      +     (prefill !== '' ? ' value="' + prefill + '"' : '')
+      +   '>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+document.getElementById('btn-batch-submit').addEventListener('click', function() {
+  clearMsg('msg-batch-table');
+  var toSave  = [];
+  var errMsg  = '';
+
+  B.rooms.forEach(function(room, idx) {
+    if (errMsg) return;
+    var val = document.getElementById('batch-end-' + idx).value.trim();
+    if (val === '') return;
+    var end = parseFloat(val);
+    if (isNaN(end) || end < 0) {
+      errMsg = 'ค่ามิเตอร์ห้อง ' + room.room + ' ไม่ถูกต้อง'; return;
+    }
+    if (end < room.prevMeter) {
+      errMsg = 'ห้อง ' + room.room + ': ถึง (' + end + ') ต้องไม่น้อยกว่าเริ่ม (' + room.prevMeter + ')'; return;
+    }
+    toSave.push({ room: room.room, tenantName: room.tenantName, isEmpty: room.isEmpty,
+                  prevMeter: room.prevMeter, endMeter: end });
+  });
+
+  if (errMsg) { showMsg('msg-batch-table', errMsg, 'error'); return; }
+  if (!toSave.length) { showMsg('msg-batch-table', 'กรุณากรอกค่ามิเตอร์อย่างน้อย 1 ห้อง', 'error'); return; }
+
+  B.toSave = toSave;
+  renderBatchReview();
+  showBatchStep('batch-step-review');
+});
+
+function calcAmount(used) {
+  if (!B.rates) return 0;
+  if (B.meterType === 'elec') return used * B.rates.electricity;
+  return used < 6 ? B.rates.waterMin : used * B.rates.water;
+}
+
+function renderBatchReview() {
+  var typeLabel = B.meterType === 'elec' ? '&#x26A1; ไฟ' : '&#x1F4A7; น้ำ';
+  var hasWarn   = false;
+
+  document.getElementById('batch-review-subtitle').innerHTML =
+    'ตึง ' + B.building + ' — ' + typeLabel + ' &nbsp;·&nbsp; เดือน ' + B.monthYear + ' &nbsp;·&nbsp; ' + B.toSave.length + ' ห้อง';
+
+  document.getElementById('batch-review-thead').innerHTML =
+    '<tr>'
+    + '<th style="text-align:left;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ห้อง</th>'
+    + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">เริ่ม</th>'
+    + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ถึง</th>'
+    + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ใช้ไป</th>'
+    + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">เป็นเงิน</th>'
+    + '</tr>';
+
+  document.getElementById('batch-review-tbody').innerHTML = B.toSave.map(function(r) {
+    var used     = r.endMeter - r.prevMeter;
+    var amount   = calcAmount(used);
+    var roomCell = r.room;
+    var rowStyle = '';
+    if (r.isEmpty && used > 0) {
+      roomCell += '&nbsp;<span style="background:#fde8e8;color:#c0392b;font-size:0.72rem;padding:2px 6px;border-radius:10px;font-weight:700">&#x26A0; ห้องว่าง</span>';
+      rowStyle  = 'background:#fff8f8;';
+      hasWarn   = true;
+    }
+    return '<tr style="border-bottom:1px solid #f0f0f0;' + rowStyle + '">'
+      + '<td style="padding:8px 6px;font-weight:600;white-space:nowrap">' + roomCell + '</td>'
+      + '<td style="padding:8px 6px;text-align:right;color:#666;white-space:nowrap">' + r.prevMeter + '</td>'
+      + '<td style="padding:8px 6px;text-align:right;white-space:nowrap">' + r.endMeter + '</td>'
+      + '<td style="padding:8px 6px;text-align:right;white-space:nowrap">' + used + '</td>'
+      + '<td style="padding:8px 6px;text-align:right;font-weight:500;white-space:nowrap">' + fmt(amount) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  var warnEl = document.getElementById('batch-review-warn');
+  if (hasWarn) {
+    warnEl.textContent = 'พบห้องว่างที่มีการใช้งาน กรุณาตรวจสอบก่อนบันทึก';
+    warnEl.className   = 'msg error';
+  } else {
+    warnEl.textContent = '';
+    warnEl.className   = 'msg';
+  }
+}
+
+document.getElementById('btn-batch-confirm').addEventListener('click', function() {
+  setLoading('btn-batch-confirm', true, 'กำลังบันทึก...');
+  clearMsg('msg-batch-confirm');
+
+  var records = B.toSave.map(function(r) {
+    return { monthYear: B.monthYear, roomId: r.room, prevMeter: r.prevMeter, endMeter: r.endMeter };
+  });
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      setLoading('btn-batch-confirm', false, 'ยืนยันบันทึก');
+      document.getElementById('batch-done-msg').textContent =
+        'บันทึก ' + result.saved + ' ห้อง เสร็จเรียบร้อย';
+      showBatchStep('batch-step-done');
+    })
+    .withFailureHandler(function(err) {
+      setLoading('btn-batch-confirm', false, 'ยืนยันบันทึก');
+      showMsg('msg-batch-confirm', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .saveBatchMeters(records, B.meterType);
+});
 
 // ──────────────────────────────────────────
 // Room banner

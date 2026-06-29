@@ -447,6 +447,74 @@ function updateRoomInfo(roomId, info) {
   throw new Error('ไม่พบห้อง ' + roomId + ' ใน ตั้งค่า');
 }
 
+function getAllRoomsWithPrevMeter(monthStr, meterType, building) {
+  var settingsData = _getSettingsSheet().getRange('A6:F51').getValues();
+  var allRecords   = _getRecordSheet().getDataRange().getValues();
+  var prevMonth    = _getPrevMonth(monthStr);
+  var rates        = getRates(building);
+
+  var result = [];
+  for (var i = 0; i < settingsData.length; i++) {
+    var r = settingsData[i];
+    if (!r[0] || String(r[0])[0] !== building) continue;
+
+    var roomId     = r[0];
+    var tenantName = r[1] || '';
+    var elecInit   = r[4] || 0;
+    var waterInit  = r[5] || 0;
+    var prevMeter  = null;
+    var existingEnd = null;
+
+    for (var j = 1; j < allRecords.length; j++) {
+      var d = allRecords[j];
+      if (d[1] !== roomId) continue;
+      var rowMonth = _toMonthYear(d[0]);
+      if (rowMonth === prevMonth) {
+        prevMeter = meterType === 'water' ? (d[7] || 0) : (d[3] || 0);
+      }
+      if (rowMonth === monthStr) {
+        var status = d[22];
+        var recorded = meterType === 'elec'
+          ? (status === 'draft-elec' || status === 'draft' || status === 'confirmed')
+          : (status === 'draft-water' || status === 'draft' || status === 'confirmed');
+        if (recorded) existingEnd = meterType === 'water' ? d[7] : d[3];
+      }
+    }
+
+    if (prevMeter === null) {
+      prevMeter = meterType === 'water' ? waterInit : elecInit;
+    }
+
+    result.push({
+      room:        roomId,
+      tenantName:  tenantName,
+      isEmpty:     !tenantName,
+      prevMeter:   prevMeter,
+      existingEnd: existingEnd
+    });
+  }
+
+  return { rooms: result, rates: rates };
+}
+
+function saveBatchMeters(records, meterType) {
+  for (var i = 0; i < records.length; i++) {
+    var rec  = records[i];
+    var data = { monthYear: rec.monthYear, roomId: rec.roomId };
+    if (meterType === 'elec' || meterType === 'both') {
+      data.elecStart = rec.prevMeter;
+      data.elecEnd   = rec.endMeter;
+    }
+    if (meterType === 'water' || meterType === 'both') {
+      data.waterStart = rec.prevMeter;
+      data.waterEnd   = rec.endMeter;
+    }
+    saveRecord(data, meterType);
+  }
+  SpreadsheetApp.flush();
+  return { saved: records.length };
+}
+
 // รันจาก Apps Script editor เพื่อแปลง Column A ที่เป็น Date → string ทุก row
 // ทำครั้งเดียวเพื่อแก้ข้อมูลเก่าที่บันทึกก่อน fix
 function fixRecordSheetDates() {
