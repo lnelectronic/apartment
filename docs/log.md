@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-29 (8)
+
+### feat: Data Model — Draft Meter Status, col 23 สถานะมิเตอร์ (Session 2 — plan-batch-meter)
+
+**การเปลี่ยนแปลง**:
+- `design.md`: เพิ่ม col 23 `สถานะมิเตอร์` ใน Column Index ("draft-elec" / "draft-water" / "draft" / "confirmed")
+- `SheetSetup.gs`:
+  - `_setupRecordSheet()`: เพิ่ม header col 23 + `setColumnWidth(23, 120)`
+  - `migrateAddMeterStatus()` (ใหม่): migration สำหรับ Sheet ที่มีข้อมูลอยู่แล้ว — เพิ่ม header + style col 23
+- `DataService.gs`:
+  - `saveRecord(data, meterType)`: รับ `meterType` ('elec'|'water'|'both', default 'both')
+    - คำนวณ elec/water cost เฉพาะ type ที่ส่งมา (ป้องกัน waterMin ผิดเมื่อ elec-only)
+    - update existing row แบบ partial — เขียนเฉพาะ cols ที่เกี่ยวกับ type นั้น
+    - block แก้ไข row ที่ `meterStatus = 'confirmed'` → throw error
+    - เขียน col 23 สถานะมิเตอร์ ทั้ง new row และ update
+  - `_meterStatusForNew(meterType)` (ใหม่): คืน draft-elec / draft-water / draft
+  - `_mergeMeterStatus(currentStatus, meterType)` (ใหม่): merge logic เช่น draft-elec + water → draft
+  - `confirmMonth(monthStr)` (ใหม่): เปลี่ยน status draft* → confirmed ทุกห้องของเดือนนั้น; คืน `{ confirmed }`
+  - `getRecordThisMonth()`: เพิ่ม field `meterStatus` (d[22]) ใน return object
+
+---
+
 ## 2026-06-29 (7)
 
 ### feat: admin — bottom nav + rooms table + settings modal (Session 5)

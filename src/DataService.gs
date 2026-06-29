@@ -112,74 +112,101 @@ function getRecordThisMonth(roomId, monthYear) {
     waterStart:   d[6],  waterEnd:   d[7],  waterUsed:   d[8],  waterAmount:   d[9],
     rent:         d[10], furniture:  d[11], prevBalance: d[12], fine:          d[13],
     item1Name:    d[14], item1Amount:d[15], item2Name:   d[16], item2Amount:   d[17],
-    total:        d[18], paid:       d[19], status:      d[20]
+    total:        d[18], paid:       d[19], status:      d[20],
+    meterStatus:  d[22]  // col 23: สถานะมิเตอร์
   };
 }
 
-// data: { monthYear, roomId, elecStart, elecEnd, waterStart, waterEnd,
+// data: { monthYear, roomId, elecStart?, elecEnd?, waterStart?, waterEnd?,
 //         item1Name?, item1Amount?, item2Name?, item2Amount? }
-// เมื่อแก้ไขทับ: ไม่แตะ col 14 (ค่าปรับ), col 20 (จ่ายจริง), col 21 (สถานะ)
-function saveRecord(data) {
+// meterType: 'elec' | 'water' | 'both' (default: 'both')
+// ไม่แตะ col 14 (ค่าปรับ), col 20 (จ่ายจริง), col 21 (สถานะ)
+// row ที่เป็น 'confirmed' แล้ว → throw error
+function saveRecord(data, meterType) {
+  if (!meterType) meterType = 'both';
+
   var room  = getRoom(data.roomId);
   var rates = getRates(data.roomId[0]);
   if (!room || !rates) throw new Error('ไม่พบข้อมูลห้อง: ' + data.roomId);
 
-  var elecUsed    = data.elecEnd   - data.elecStart;
-  var elecAmount  = elecUsed       * rates.electricity;
-  var waterUsed   = data.waterEnd  - data.waterStart;
-  var waterAmount = waterUsed < 6 ? rates.waterMin : waterUsed * rates.water;
+  var elecUsed = 0, elecAmount = 0;
+  if (meterType === 'elec' || meterType === 'both') {
+    elecUsed   = (data.elecEnd || 0) - (data.elecStart || 0);
+    elecAmount = elecUsed * rates.electricity;
+  }
+
+  var waterUsed = 0, waterAmount = 0;
+  if (meterType === 'water' || meterType === 'both') {
+    waterUsed   = (data.waterEnd || 0) - (data.waterStart || 0);
+    waterAmount = waterUsed < 6 ? rates.waterMin : waterUsed * rates.water;
+  }
+
   var item1Amount = data.item1Amount || 0;
   var item2Amount = data.item2Amount || 0;
 
-  var prevMonth = _getPrevMonth(data.monthYear);
+  var prevMonth   = _getPrevMonth(data.monthYear);
   // คำนวณค้างเดือนก่อนเป็นตัวเลข — Sheets formula ทำให้เกิด circular ref กับ col S (total)
   var prevBalance = 0;
-  var prevRow = _findRecordRow(data.roomId, prevMonth);
+  var prevRow     = _findRecordRow(data.roomId, prevMonth);
   if (prevRow) {
-    var prevTotal = Number(prevRow.data[18]) || 0;
-    var prevPaid  = Number(prevRow.data[19]) || 0;
-    prevBalance = Math.max(0, prevTotal - prevPaid);
+    prevBalance = Math.max(0, (Number(prevRow.data[18]) || 0) - (Number(prevRow.data[19]) || 0));
   }
 
   var sheet    = _getRecordSheet();
   var existing = _findRecordRow(data.roomId, data.monthYear);
-
-  var now = new Date();
+  var now      = new Date();
 
   if (existing) {
-    var r = existing.row;
-    // cols 1-12: ข้อมูลที่คำนวณใหม่
-    sheet.getRange(r, 1, 1, 12).setValues([[
-      data.monthYear, data.roomId,
-      data.elecStart, data.elecEnd, elecUsed, elecAmount,
-      data.waterStart, data.waterEnd, waterUsed, waterAmount,
-      room.rent, room.furniture
-    ]]);
-    // col 13: ค้างเดือนก่อน (static value — formula จะเกิด circular ref กับ col S)
+    var r             = existing.row;
+    var currentStatus = existing.data[22]; // col 23: สถานะมิเตอร์ (0-indexed = 22)
+
+    if (currentStatus === 'confirmed') {
+      throw new Error('ห้อง ' + data.roomId + ' เดือน ' + data.monthYear + ' ถูก confirm แล้ว ไม่สามารถแก้ไขได้');
+    }
+
+    // update elec columns (3–6) เฉพาะเมื่อกรอกไฟ
+    if (meterType === 'elec' || meterType === 'both') {
+      sheet.getRange(r, 3, 1, 4).setValues([[
+        data.elecStart || 0, data.elecEnd || 0, elecUsed, elecAmount
+      ]]);
+    }
+    // update water columns (7–10) เฉพาะเมื่อกรอกน้ำ
+    if (meterType === 'water' || meterType === 'both') {
+      sheet.getRange(r, 7, 1, 4).setValues([[
+        data.waterStart || 0, data.waterEnd || 0, waterUsed, waterAmount
+      ]]);
+    }
+    // rent + furniture (cols 11–12) — ดึงจาก settings ล่าสุด
+    sheet.getRange(r, 11, 1, 2).setValues([[room.rent, room.furniture]]);
+    // col 13: ค้างเดือนก่อน
     sheet.getRange(r, 13).setValue(prevBalance);
-    // cols 15-18: รายการอื่นๆ
+    // cols 15–18: รายการอื่นๆ
     sheet.getRange(r, 15, 1, 4).setValues([[
       data.item1Name || '', item1Amount, data.item2Name || '', item2Amount
     ]]);
     // col 19: รวม formula
     sheet.getRange(r, 19).setFormula('=F'+r+'+J'+r+'+K'+r+'+L'+r+'+M'+r+'+N'+r+'+P'+r+'+R'+r);
-    // cols 20-21 (จ่ายจริง, สถานะ): ไม่แตะ
-    // col 22: timestamp อัปเดตทุกครั้งที่แก้ไข
+    // cols 20–21 (จ่ายจริง, สถานะ): ไม่แตะ
+    // col 22: timestamp
     sheet.getRange(r, 22).setValue(now);
+    // col 23: สถานะมิเตอร์ — merge
+    sheet.getRange(r, 23).setValue(_mergeMeterStatus(currentStatus, meterType));
+
   } else {
     sheet.appendRow([
       data.monthYear, data.roomId,
-      data.elecStart, data.elecEnd, elecUsed, elecAmount,
-      data.waterStart, data.waterEnd, waterUsed, waterAmount,
+      data.elecStart || 0, data.elecEnd || 0, elecUsed, elecAmount,
+      data.waterStart || 0, data.waterEnd || 0, waterUsed, waterAmount,
       room.rent, room.furniture,
-      prevBalance, // col 13: ค้างเดือนก่อน
-      0,           // col 14: ค่าปรับ
+      prevBalance,   // col 13: ค้างเดือนก่อน
+      0,             // col 14: ค่าปรับ
       data.item1Name || '', item1Amount,
       data.item2Name || '', item2Amount,
-      '',          // col 19: รวม — formula set ด้านล่าง
-      0,           // col 20: จ่ายจริง
-      'ค้าง',      // col 21: สถานะ
-      now          // col 22: วันที่จด
+      '',            // col 19: รวม — formula set ด้านล่าง
+      0,             // col 20: จ่ายจริง
+      'ค้าง',        // col 21: สถานะ
+      now,           // col 22: วันที่จด
+      _meterStatusForNew(meterType)  // col 23: สถานะมิเตอร์
     ]);
     var r = sheet.getLastRow();
     // appendRow ไม่ inherit column format และ auto-convert "6/2026" → Date serial
@@ -189,6 +216,36 @@ function saveRecord(data) {
   }
 
   SpreadsheetApp.flush();
+}
+
+function _meterStatusForNew(meterType) {
+  if (meterType === 'elec')  return 'draft-elec';
+  if (meterType === 'water') return 'draft-water';
+  return 'draft';
+}
+
+function _mergeMeterStatus(currentStatus, meterType) {
+  if (meterType === 'both') return 'draft';
+  if (meterType === 'elec'  && currentStatus === 'draft-water') return 'draft';
+  if (meterType === 'water' && currentStatus === 'draft-elec')  return 'draft';
+  return currentStatus; // re-save ประเภทเดิม หรือ draft อยู่แล้ว → คงสถานะ
+}
+
+// เปลี่ยน status มิเตอร์ทุกห้องของเดือนนั้นจาก draft* → confirmed
+function confirmMonth(monthStr) {
+  var sheet    = _getRecordSheet();
+  var data     = sheet.getDataRange().getValues();
+  var draftSet = { 'draft': true, 'draft-elec': true, 'draft-water': true };
+  var confirmed = 0;
+  for (var i = 1; i < data.length; i++) {
+    if (_toMonthYear(data[i][0]) !== monthStr) continue;
+    if (draftSet[data[i][22]]) {
+      sheet.getRange(i + 1, 23).setValue('confirmed');
+      confirmed++;
+    }
+  }
+  SpreadsheetApp.flush();
+  return { confirmed: confirmed };
 }
 
 function updatePayment(roomId, monthYear, paidAmount) {

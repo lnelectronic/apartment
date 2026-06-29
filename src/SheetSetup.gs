@@ -349,7 +349,8 @@ function _setupRecordSheet(sheet) {
     'รวม',             // col 19 S
     'จ่ายจริง',        // col 20 T
     'สถานะ',           // col 21 U
-    'วันที่จด'         // col 22 V
+    'วันที่จด',        // col 22 V
+    'สถานะมิเตอร์'    // col 23 W
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -377,6 +378,7 @@ function _setupRecordSheet(sheet) {
   sheet.setColumnWidth(20, 90);
   sheet.setColumnWidth(21, 90);
   sheet.setColumnWidth(22, 140);
+  sheet.setColumnWidth(23, 120);
 }
 
 // ------------------------------------------------------------------ //
@@ -560,6 +562,29 @@ function clearTestData() {
 
   SpreadsheetApp.flush();
   Logger.log('clearTestData() สำเร็จ — ข้อมูลทดสอบถูกลบแล้ว');
+}
+
+// ------------------------------------------------------------------ //
+// Migration: เพิ่ม col 23 สถานะมิเตอร์ ใน Sheet "บันทึก"
+// รันครั้งเดียวบน Sheet ที่มีข้อมูลอยู่แล้ว
+function migrateAddMeterStatus() {
+  var sheet = _getRecordSheet();
+  var existing = sheet.getRange(1, 23).getValue();
+  if (existing && existing !== '') {
+    Logger.log('migrateAddMeterStatus: col 23 มีข้อมูลอยู่แล้ว ("' + existing + '") — ข้าม');
+    return;
+  }
+  sheet.getRange(1, 23).setValue('สถานะมิเตอร์');
+  var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
+  sheet.getRange(1, 23)
+    .setTextStyle(headerStyle)
+    .setBackground('#434343')
+    .setFontColor('#ffffff')
+    .setHorizontalAlignment('center')
+    .setWrap(true);
+  sheet.setColumnWidth(23, 120);
+  SpreadsheetApp.flush();
+  Logger.log('migrateAddMeterStatus: เพิ่ม col 23 "สถานะมิเตอร์" สำเร็จ');
 }
 
 // ------------------------------------------------------------------ //
