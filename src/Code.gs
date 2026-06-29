@@ -19,9 +19,18 @@ function checkPassword(pw) {
 }
 
 // เรียกจาก staff.html: google.script.run.checkStaffPassword(pw)
-// Script Properties: STAFF_PASSWORD
+// Script Properties: STAFF_PASSWORDS = JSON array เช่น ["pass1","pass2"]
+// fallback: STAFF_PASSWORD = "pass1" (key เดียว)
 function checkStaffPassword(pw) {
   var props = PropertiesService.getScriptProperties();
+  var list  = props.getProperty('STAFF_PASSWORDS');
+  if (list) {
+    var parsed;
+    try { parsed = JSON.parse(list); } catch (e) {
+      throw new Error('STAFF_PASSWORDS ต้องเป็น JSON array เช่น ["1234","5678"] — ค่าปัจจุบัน: ' + list);
+    }
+    return Array.isArray(parsed) && parsed.indexOf(pw) !== -1;
+  }
   return pw === props.getProperty('STAFF_PASSWORD');
 }
 
