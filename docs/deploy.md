@@ -8,22 +8,31 @@ https://script.google.com/d/1uP1yiroqBv4hInGJ1jbQxRyznieX4QWczv4RhLok8qUFKkNZIQ0
 
 ---
 
-## ขั้นตอนที่ 2 — ตั้ง Admin Password
+## ขั้นตอนที่ 2 — ตั้ง Password (2 role)
 
 Script Editor → **Project Settings** (ไอคอน ⚙️) → **Script Properties** → Add property
 
-### แอดมินคนเดียว
+### Owner (เจ้าของหอ) — เข้าหน้า `?page=admin`
+| Property | Value | หมายเหตุ |
+|----------|-------|---------|
+| `OWNER_PASSWORD` | `รหัสเจ้าของ` | สิทธิ์เต็ม: approve มิเตอร์, แก้ค่าเช่า |
+
+### Staff (พนักงานดูแล) — เข้าหน้า `?page=staff`
+
+**พนักงานคนเดียว:**
 | Property | Value |
 |----------|-------|
-| `ADMIN_PASSWORD` | `รหัสที่ต้องการ` |
+| `STAFF_PASSWORD` | `รหัสพนักงาน` |
 
-### แอดมินหลายคน (แนะนำ)
+**พนักงานหลายคน (แนะนำ):**
 | Property | Value |
 |----------|-------|
-| `ADMIN_PASSWORDS` | `["รหัสคน1","รหัสคน2"]` |
+| `STAFF_PASSWORDS` | `["รหัสคน1","รหัสคน2"]` |
 
-> ถ้ามีทั้งสอง key → `ADMIN_PASSWORDS` ถูกใช้ก่อนเสมอ
+> ถ้ามีทั้ง `STAFF_PASSWORDS` และ `STAFF_PASSWORD` → `STAFF_PASSWORDS` ถูกใช้ก่อนเสมอ
 > ต้องเป็น JSON array จริงๆ รวมถึง `[`, `"`, `]` — ถ้า format ผิดระบบจะแสดง error บอก
+
+> **หมายเหตุ**: ถ้า migrate จากระบบเดิมที่ใช้ `ADMIN_PASSWORD` อยู่แล้ว ไม่ต้องลบ — ระบบ fallback ให้อัตโนมัติจนกว่าจะตั้ง `OWNER_PASSWORD` ใหม่
 
 ---
 
@@ -68,11 +77,11 @@ https://docs.google.com/spreadsheets/d/1AVl6OKR59dEVLtIZ7lC_zaIxtCcy2IR3cCB30pPE
 
 URL ทั้ง 3 หน้า:
 
-| หน้า | URL |
-|------|-----|
-| พนักงานจดมิเตอร์อย่างเดียว (ไม่เห็นยอดเงิน) | `...exec?page=meter` |
-| พนักงานเต็มรูปแบบ (จดมิเตอร์ + เห็นยอด) | `...exec?page=staff` |
-| Admin (Dashboard + บิล + จัดการห้อง) | `...exec?page=admin` |
+| หน้า | URL | Login |
+|------|-----|-------|
+| Staff (จดมิเตอร์ทีละห้อง / batch + จัดการบิล) | `...exec?page=staff` | STAFF_PASSWORD |
+| Owner (Dashboard + approve มิเตอร์ + จัดการห้อง) | `...exec?page=admin` | OWNER_PASSWORD |
+| พนักงานจดมิเตอร์อย่างเดียว (legacy) | `...exec?page=meter` | ไม่มี login |
 
 ### `/exec` vs `/dev`
 
@@ -117,4 +126,4 @@ Script Editor → **Deploy** → **Manage deployments** → เลือก depl
 2. Script Editor → **Share** → โอน Ownership เช่นกัน
 3. เจ้าของต้อง **Deploy ใหม่** (New deployment) เพื่อให้ "Execute as: Me" เป็น account ของเจ้าของ
    - URL จะเปลี่ยน → แจ้ง URL ใหม่ให้พนักงาน
-4. ตั้ง Script Properties (`ADMIN_PASSWORDS`) ใหม่ใน account ของเจ้าของ
+4. ตั้ง Script Properties ใหม่ใน account ของเจ้าของ: `OWNER_PASSWORD` และ `STAFF_PASSWORDS`
