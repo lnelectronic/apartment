@@ -31,24 +31,25 @@
     }
     #topbar h1 { font-size: 1.1rem; font-weight: 600; }
 
-    /* ── Tabs ── */
-    .tabs {
-      background: white; border-bottom: 2px solid #e8e8e8;
-      display: flex; padding: 0 20px; overflow-x: auto;
-      position: sticky; top: 49px; z-index: 100;
+    /* ── Bottom Nav ── */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: white; border-top: 1.5px solid #e0e0e0;
+      display: flex; height: 60px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
     }
-    .tab-btn {
-      padding: 14px 22px; font-family: inherit; font-size: 1rem;
-      border: none; background: none; cursor: pointer; color: #666;
-      border-bottom: 3px solid transparent; margin-bottom: -2px;
-      white-space: nowrap; font-weight: 500;
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; border: none; background: none; cursor: pointer;
+      font-family: inherit; font-size: 0.72rem; color: #999; padding: 6px 4px;
     }
-    .tab-btn.active { color: #0066cc; border-bottom-color: #0066cc; font-weight: 700; }
-    .tab-btn.tab-link { margin-left: auto; color: #27ae60; }
-    .tab-btn.tab-link:hover { color: #1e8449; border-bottom-color: #27ae60; }
+    .nav-btn .nav-icon { font-size: 1.35rem; line-height: 1; }
+    .nav-btn.active { color: #0066cc; }
+    .nav-btn.active .nav-icon { transform: scale(1.1); }
 
     /* ── Content ── */
-    .content { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    .content { padding: 20px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
 
     /* ── Cards ── */
     .card {
@@ -139,30 +140,20 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Rooms tab ── */
-    .room-grid-hdr {
-      display: grid; grid-template-columns: 60px 1fr 100px 82px 82px 82px 100px 120px 100px 100px 155px;
-      gap: 8px; padding: 8px 4px;
-      font-size: 0.8rem; font-weight: 700; color: #888;
-      border-bottom: 2px solid #eee; margin-bottom: 4px;
-    }
-    .room-grid-row {
-      display: grid; grid-template-columns: 60px 1fr 100px 82px 82px 82px 100px 120px 100px 100px 155px;
-      gap: 8px; align-items: center; padding: 8px 4px;
-      border-bottom: 1px solid #f0f0f0;
-    }
     .badge-vacant {
       background: #fff3e0; color: #e67e22;
       font-size: 0.7rem; padding: 1px 6px; border-radius: 10px;
       font-weight: 600; vertical-align: middle; margin-left: 4px;
     }
-    .room-grid-row:last-child { border-bottom: none; }
-    .room-id-lbl { font-weight: 700; font-size: 0.95rem; color: #0066cc; }
+    .room-id-lbl { font-weight: 700; font-size: 0.95rem; color: #0066cc; white-space: nowrap; }
     .group-hdr {
       font-weight: 700; color: #555; font-size: 0.82rem;
       text-transform: uppercase; letter-spacing: 0.5px;
       padding: 12px 4px 6px; border-top: 1px solid #eee; margin-top: 8px;
     }
     .group-hdr:first-child { border-top: none; margin-top: 0; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.15rem; padding: 4px 6px; border-radius: 6px; line-height: 1; }
+    .btn-icon:hover { background: #f0f0f0; }
 
     /* ── Bill modal ── */
     #modal-bill {
@@ -207,9 +198,13 @@
     /* ── Misc ── */
     @media (max-width: 600px) {
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .room-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .room-grid-hdr,
-      .room-grid-row { min-width: 1100px; }
+    }
+
+    /* ── Settings modal ── */
+    #modal-settings {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 500;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
     }
 
     /* ── Checkout modal ── */
@@ -259,15 +254,17 @@
 
   <div id="topbar">
     <h1>App-Room Admin</h1>
-    <button id="btn-logout" class="btn btn-ghost btn-sm">ออกจากระบบ</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-ghost btn-sm" onclick="openStaffPage()">จดมิเตอร์ ↗</button>
+      <button id="btn-logout" class="btn btn-ghost btn-sm">ออกจากระบบ</button>
+    </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-    <button class="tab-btn" data-tab="billing">จัดการบิล</button>
-    <button class="tab-btn" data-tab="rooms">จัดการห้อง</button>
-    <button class="tab-btn" data-tab="meter">สรุปมิเตอร์</button>
-    <button class="tab-btn tab-link" onclick="openStaffPage()">จดค่ามิเตอร์ ↗</button>
+  <div id="bottom-nav">
+    <button class="nav-btn active" data-tab="dashboard"><span class="nav-icon">🏠</span>Dashboard</button>
+    <button class="nav-btn" data-tab="billing"><span class="nav-icon">📋</span>บิล</button>
+    <button class="nav-btn" data-tab="rooms"><span class="nav-icon">🏘</span>ห้อง</button>
+    <button class="nav-btn" data-tab="meter"><span class="nav-icon">📊</span>มิเตอร์</button>
   </div>
 
   <!-- ─── Dashboard ─── -->
@@ -382,7 +379,7 @@
     <div class="card">
       <div class="card-title">จัดการข้อมูลห้องพัก</div>
       <p style="color:#888;font-size:0.9rem;margin-bottom:14px">
-        แก้ไขชื่อผู้เช่า, ค่าเช่า, ค่าเฟอร์นิเจอร์ แล้วกด "บันทึก"
+        แก้ไขชื่อผู้เช่า, ค่าเช่า, ค่าเฟอร์นิเจอร์ แล้วกด "บันทึก" · ⚙ = ตั้งค่า/Note/มิเตอร์เริ่ม
       </p>
       <div id="rooms-msg" class="alert" style="display:none;margin-bottom:12px"></div>
       <div id="rooms-loading" class="loading-box">
@@ -390,24 +387,30 @@
       </div>
       <div id="rooms-content" hidden>
         <div class="group-hdr">ตึก C (ชยางกูร)</div>
-        <div class="room-grid-wrap">
-          <div class="room-grid-hdr">
-            <div>ห้อง</div><div>ชื่อ</div><div>เบอร์</div>
-            <div>เช่า</div><div>เฟอร์</div><div>มัดจำ</div>
-            <div>วันย้ายเข้า</div><div>Note</div>
-            <div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div>
-          </div>
-          <div id="rooms-c"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ห้อง</th><th>ชื่อผู้เช่า</th><th>เบอร์</th>
+                <th style="text-align:right">เช่า</th><th style="text-align:right">เฟอร์</th><th style="text-align:right">มัดจำ</th>
+                <th>วันย้ายเข้า</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="rooms-c"></tbody>
+          </table>
         </div>
         <div class="group-hdr">ตึก R (Runway)</div>
-        <div class="room-grid-wrap">
-          <div class="room-grid-hdr">
-            <div>ห้อง</div><div>ชื่อ</div><div>เบอร์</div>
-            <div>เช่า</div><div>เฟอร์</div><div>มัดจำ</div>
-            <div>วันย้ายเข้า</div><div>Note</div>
-            <div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div>
-          </div>
-          <div id="rooms-r"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ห้อง</th><th>ชื่อผู้เช่า</th><th>เบอร์</th>
+                <th style="text-align:right">เช่า</th><th style="text-align:right">เฟอร์</th><th style="text-align:right">มัดจำ</th>
+                <th>วันย้ายเข้า</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="rooms-r"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -429,6 +432,38 @@
     <div class="modal-actions">
       <button id="btn-print" class="btn btn-primary">พิมพ์</button>
       <button id="btn-close-bill" class="btn btn-ghost">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SETTINGS MODAL
+════════════════════════════════════ -->
+<div id="modal-settings" hidden>
+  <div class="modal-box">
+    <div class="bill-header">
+      <div class="bill-title">⚙ ตั้งค่าห้อง</div>
+      <div id="rs-meta" class="bill-meta"></div>
+    </div>
+    <hr class="bill-dashed">
+    <div class="field">
+      <label>Note ห้อง</label>
+      <textarea id="rs-note" rows="4" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:0.95rem;resize:vertical" placeholder="บันทึกข้อมูลพิเศษของห้องนี้..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin-bottom:0">
+        <label>มิเตอร์ไฟเริ่มต้น</label>
+        <input id="rs-elec" type="number" min="0" class="text-input" placeholder="0">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>มิเตอร์น้ำเริ่มต้น</label>
+        <input id="rs-water" type="number" min="0" class="text-input" placeholder="0">
+      </div>
+    </div>
+    <div id="rs-msg" class="alert" style="display:none;margin-top:12px"></div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="rs-btn-save"   class="btn btn-primary" style="flex:1">บันทึก</button>
+      <button id="rs-btn-cancel" class="btn btn-ghost">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -551,13 +586,11 @@ function currentMonthYear() {
 function fmt(n)      { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtB(n)     { return fmt(n) + ' บาท'; }
 
-var _staffUrl = '';
-google.script.url.getLocation(function(loc) {
-  _staffUrl = loc.href.replace(/\?.*$/, '') + '?page=staff';
-});
-
 function openStaffPage() {
-  if (_staffUrl) window.open(_staffUrl, '_blank');
+  google.script.url.getLocation(function(loc) {
+    var url = loc.href.replace(/\?.*$/, '') + '?page=staff';
+    window.open(url, '_blank');
+  });
 }
 
 // ──────────────────────────────────────────
@@ -625,12 +658,12 @@ function showLoginMsg(text, type) {
 // ──────────────────────────────────────────
 // Tab navigation
 // ──────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(function(btn) {
+document.querySelectorAll('.nav-btn').forEach(function(btn) {
   btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
 });
 
 function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach(function(b) {
+  document.querySelectorAll('.nav-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
   ['dashboard','billing','meter','rooms'].forEach(function(t) {
@@ -944,27 +977,25 @@ function renderRoomsTab(rooms) {
 }
 
 function renderRoomRows(rooms, prefix) {
-  if (!rooms.length) return '<p style="color:#aaa;padding:8px 4px;font-size:0.9rem">ไม่มีห้อง</p>';
+  if (!rooms.length) return '<tr><td colspan="8" style="color:#aaa;text-align:center;padding:20px">ไม่มีห้อง</td></tr>';
   return rooms.map(function(r, i) {
     var id = prefix + i;
     var isVacant = !r.name;
-    return '<div class="room-grid-row" id="rdiv_' + id + '">'
-      + '<div class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</div>'
-      + '<div><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า"></div>'
-      + '<div><input class="txt-sm" type="text" id="rphone_' + id + '" value="' + escHtml(r.phone || '') + '" placeholder="เบอร์โทร" style="width:95px"></div>'
-      + '<div><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0" style="width:70px"></div>'
-      + '<div><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0" style="width:70px"></div>'
-      + '<div><input class="num-input" type="number" id="rdeposit_' + id + '" value="' + (r.deposit || 0) + '" min="0" style="width:70px"></div>'
-      + '<div><input class="txt-sm" type="text" id="rmovein_' + id + '" value="' + escHtml(r.moveInDate || '') + '" placeholder="dd/MM/yyyy" style="width:95px"></div>'
-      + '<div><input class="txt-sm" type="text" id="rnote_' + id + '" value="' + escHtml(r.note || '') + '" placeholder="Note" style="width:115px"></div>'
-      + '<div><input class="num-input" type="number" id="relec_' + id + '" value="' + (r.elecInit || 0) + '" min="0" style="width:88px"></div>'
-      + '<div><input class="num-input" type="number" id="rwater_' + id + '" value="' + (r.waterInit || 0) + '" min="0" style="width:88px"></div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
-      + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button>'
-      + (!isVacant ? '<button class="btn btn-danger btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
-      + (isVacant  ? '<button class="btn btn-primary btn-sm" id="rin_' + id + '" onclick="startCheckIn(\'' + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
-      + '</div>'
-      + '</div>';
+    return '<tr id="rdiv_' + id + '">'
+      + '<td><span class="room-id-lbl">' + r.roomId + (isVacant ? ' <span class="badge-vacant">ว่าง</span>' : '') + '</span></td>'
+      + '<td><input class="txt-sm" type="text" id="rname_' + id + '" value="' + escHtml(r.name || '') + '" placeholder="ชื่อผู้เช่า" style="min-width:120px"></td>'
+      + '<td><input class="txt-sm" type="text" id="rphone_' + id + '" value="' + escHtml(r.phone || '') + '" placeholder="เบอร์โทร" style="width:110px"></td>'
+      + '<td><input class="num-input" type="number" id="rrent_' + id + '" value="' + (r.rent || 0) + '" min="0"></td>'
+      + '<td><input class="num-input" type="number" id="rfurn_' + id + '" value="' + (r.furniture || 0) + '" min="0"></td>'
+      + '<td><input class="num-input" type="number" id="rdeposit_' + id + '" value="' + (r.deposit || 0) + '" min="0"></td>'
+      + '<td><input class="txt-sm" type="text" id="rmovein_' + id + '" value="' + escHtml(r.moveInDate || '') + '" placeholder="dd/MM/yyyy" style="width:100px"></td>'
+      + '<td style="white-space:nowrap">'
+      + '<button class="btn-icon" title="ตั้งค่า/Note/มิเตอร์" onclick="startRoomSettings(\'' + r.roomId + '\',\'' + id + '\')">⚙</button>'
+      + '<button class="btn btn-success btn-sm" id="rsave_' + id + '" onclick="saveRoomRow(\'' + r.roomId + '\',\'' + id + '\')">บันทึก</button> '
+      + (!isVacant ? '<button class="btn btn-danger  btn-sm" id="rout_' + id + '" onclick="startCheckOut(\'' + r.roomId + '\',\'' + id + '\')">ย้ายออก</button>' : '')
+      + (isVacant  ? '<button class="btn btn-primary btn-sm" id="rin_'  + id + '" onclick="startCheckIn(\''  + r.roomId + '\',\'' + id + '\')">ย้ายเข้า</button>' : '')
+      + '</td>'
+      + '</tr>';
   }).join('');
 }
 
@@ -975,9 +1006,11 @@ function saveRoomRow(roomId, id) {
   var furniture  = parseFloat(document.getElementById('rfurn_'    + id).value) || 0;
   var deposit    = parseFloat(document.getElementById('rdeposit_' + id).value) || 0;
   var moveInDate = document.getElementById('rmovein_'  + id).value.trim();
-  var note       = document.getElementById('rnote_'    + id).value.trim();
-  var elecInit   = parseFloat(document.getElementById('relec_'    + id).value) || 0;
-  var waterInit  = parseFloat(document.getElementById('rwater_'   + id).value) || 0;
+  // note/elecInit/waterInit ดึงจาก allRooms cache (แก้ผ่าน settings modal แยก)
+  var rec        = S.allRooms ? S.allRooms.filter(function(r) { return r.roomId === roomId; })[0] : null;
+  var note       = rec ? (rec.note      || '') : '';
+  var elecInit   = rec ? (rec.elecInit  || 0)  : 0;
+  var waterInit  = rec ? (rec.waterInit || 0)  : 0;
 
   var btn = document.getElementById('rsave_' + id);
   btn.disabled = true;
@@ -1204,6 +1237,70 @@ document.getElementById('modal-checkin').addEventListener('click', function(e) {
   if (e.target === this) {
     document.getElementById('modal-checkin').hidden = true;
     _ciRoomId = null; _ciId = null;
+  }
+});
+
+// ──────────────────────────────────────────
+// Settings Modal
+// ──────────────────────────────────────────
+var _rsRoomId = null;
+var _rsId     = null;
+
+function startRoomSettings(roomId, id) {
+  _rsRoomId = roomId;
+  _rsId     = id;
+  var rec = S.allRooms ? S.allRooms.filter(function(r) { return r.roomId === roomId; })[0] : null;
+  document.getElementById('rs-meta').innerHTML = 'ห้อง <strong>' + escHtml(roomId) + '</strong>';
+  document.getElementById('rs-note').value  = rec ? (rec.note      || '') : '';
+  document.getElementById('rs-elec').value  = rec ? (rec.elecInit  || 0)  : 0;
+  document.getElementById('rs-water').value = rec ? (rec.waterInit || 0)  : 0;
+  document.getElementById('rs-msg').style.display = 'none';
+  document.getElementById('modal-settings').hidden = false;
+}
+
+document.getElementById('rs-btn-save').addEventListener('click', function() {
+  var note      = document.getElementById('rs-note').value;
+  var elecInit  = parseFloat(document.getElementById('rs-elec').value)  || 0;
+  var waterInit = parseFloat(document.getElementById('rs-water').value) || 0;
+
+  var btn = document.getElementById('rs-btn-save');
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...';
+  document.getElementById('rs-msg').style.display = 'none';
+
+  var roomId = _rsRoomId;
+  google.script.run
+    .withSuccessHandler(function() {
+      document.getElementById('modal-settings').hidden = true;
+      btn.disabled  = false;
+      btn.innerHTML = 'บันทึก';
+      if (S.allRooms) {
+        var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
+        if (rec) { rec.note = note; rec.elecInit = elecInit; rec.waterInit = waterInit; }
+      }
+      showMsg('rooms-msg', 'บันทึกตั้งค่าห้อง ' + roomId + ' สำเร็จ', 'success');
+      _rsRoomId = null; _rsId = null;
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled  = false;
+      btn.innerHTML = 'บันทึก';
+      var msg = document.getElementById('rs-msg');
+      msg.textContent   = 'เกิดข้อผิดพลาด: ' + err.message;
+      msg.className     = 'alert error';
+      msg.style.display = 'block';
+    })
+    .updateRoomInfo(roomId, { note: note, elecInit: elecInit, waterInit: waterInit });
+});
+
+document.getElementById('rs-btn-cancel').addEventListener('click', function() {
+  document.getElementById('modal-settings').hidden = true;
+  _rsRoomId = null; _rsId = null;
+});
+
+document.getElementById('modal-settings').addEventListener('click', function(e) {
+  if (e.target === this) {
+    document.getElementById('modal-settings').hidden = true;
+    _rsRoomId = null; _rsId = null;
   }
 });
 

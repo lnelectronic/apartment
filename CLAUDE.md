@@ -56,6 +56,12 @@ App-Room/
 3. ก่อนส่งมอบ: ลบข้อมูลทดสอบออกจาก Sheet "บันทึก" ให้เหลือแค่โครงสร้าง
 4. **ทุกครั้งที่แก้บักหรือเพิ่มฟีเจอร์ใหม่: บันทึกลง `docs/log.md`** (วันที่, ประเภท, ปัญหา, สาเหตุ, วิธีแก้, commit hash)
 
+## UI / UX Decisions
+
+- **ผู้ใช้หลักคือ mobile/tablet** — เจ้าของตึกและพนักงาน ไม่ใช่ desktop
+- **ตาราง horizontal scroll** — ใช้ `<table>` ใน `.table-wrap { overflow-x: auto }` เหมือนหน้าจัดการบิล ห้ามใช้ CSS grid ที่มี min-width ตายตัวสำหรับ tables ที่มีหลาย column
+- **Note ห้อง** — เปิดผ่าน modal แยก (textarea) ไม่ใส่ inline ใน row เพราะกรอกไม่บ่อยและอาจยาวหลายบรรทัด
+
 ## Git Commits
 - ห้ามใส่ชื่อ Claude ใน commit message ทุกรูปแบบ (ไม่มี Co-Authored-By)
 - ใช้ `git commit -m "message"` ธรรมดา

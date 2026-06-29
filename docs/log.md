@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-06-29 (7)
+
+### feat: admin — bottom nav + rooms table + settings modal (Session 5)
+
+**การเปลี่ยนแปลง**:
+- **Bottom nav**: แทน `.tabs` top strip ด้วย fixed bottom nav bar (🏠 Dashboard · 📋 บิล · 🏘 ห้อง · 📊 มิเตอร์) — mobile-first
+- **Top bar**: เพิ่มปุ่ม "จดมิเตอร์ ↗" ใน topbar แทนที่ tab ลิงก์เดิม
+- **จัดการห้อง table**: เปลี่ยนจาก CSS grid 11 col → `<table>` ใน `.table-wrap { overflow-x: auto }` เหมือนหน้าจัดการบิล; เหลือ 8 col (ห้อง ชื่อ เบอร์ เช่า เฟอร์ มัดจำ วันย้ายเข้า [ปุ่ม])
+- **⚙ Settings modal**: ปุ่ม icon gear ใน row เปิด modal `#modal-settings` สำหรับ Note (textarea) + ไฟ/น้ำเริ่มต้น — field เหล่านี้ถูกนำออกจาก main row
+- **`saveRoomRow()`**: อ่าน note/elecInit/waterInit จาก `S.allRooms` cache แทน row inputs
+- **`openStaffPage()` bug fix**: เรียก `google.script.url.getLocation` ตอนกดปุ่มทุกครั้ง แทนที่จะเก็บ URL ไว้ใน `_staffUrl` ที่อาจยัง empty ตอน click
+- **CLAUDE.md**: บันทึก UI/UX decisions: mobile-first, horizontal scroll table, Note modal
+
+---
+
 ## 2026-06-29 (6)
 
 ### feat: admin — check-in modal ย้ายเข้า (Session 4)
