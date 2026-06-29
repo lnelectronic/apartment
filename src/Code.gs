@@ -11,19 +11,18 @@ function doGet(e) {
 }
 
 // เรียกจาก admin.html: google.script.run.checkPassword(pw)
-// Script Properties: ADMIN_PASSWORDS = JSON array เช่น ["pass1","pass2"]
-// fallback: ADMIN_PASSWORD = "pass1" (key เดิม, ผู้ดูแลคนเดียว)
+// Script Properties: OWNER_PASSWORD (ใหม่) หรือ ADMIN_PASSWORD (fallback เดิม)
 function checkPassword(pw) {
   var props = PropertiesService.getScriptProperties();
-  var list  = props.getProperty('ADMIN_PASSWORDS');
-  if (list) {
-    var parsed;
-    try { parsed = JSON.parse(list); } catch (e) {
-      throw new Error('ADMIN_PASSWORDS ใน Script Properties ต้องเป็น JSON array เช่น ["1234","5678"] — ค่าปัจจุบัน: ' + list);
-    }
-    return Array.isArray(parsed) && parsed.indexOf(pw) !== -1;
-  }
-  return pw === props.getProperty('ADMIN_PASSWORD');
+  var ownerPw = props.getProperty('OWNER_PASSWORD') || props.getProperty('ADMIN_PASSWORD');
+  return pw === ownerPw;
+}
+
+// เรียกจาก staff.html: google.script.run.checkStaffPassword(pw)
+// Script Properties: STAFF_PASSWORD
+function checkStaffPassword(pw) {
+  var props = PropertiesService.getScriptProperties();
+  return pw === props.getProperty('STAFF_PASSWORD');
 }
 
 // เรียกจาก meter.html: ตรวจสอบห้องและดึงมิเตอร์เริ่มต้น ไม่ส่งข้อมูลการเงิน

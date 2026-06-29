@@ -186,6 +186,43 @@
 
     [hidden] { display: none !important; }
 
+    /* ─── Login ─── */
+    #sect-login {
+      min-height: calc(100vh - 32px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-card h1 { font-size: 1.5rem; margin-bottom: 6px; text-align: center; }
+    .login-card .subtitle { color: #888; margin-bottom: 24px; font-size: 0.95rem; text-align: center; }
+
+    /* ─── Menu ─── */
+    .menu-btn {
+      display: block;
+      width: 100%;
+      padding: 18px 20px;
+      font-size: 1.05rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      margin-bottom: 12px;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .menu-btn:active { background: #f5f5f5; }
+    .menu-btn.primary { border-color: #0066cc; color: #0066cc; }
+
     /* ─── Missing rooms ─── */
     .missing-card {
       background: white; border-radius: 12px;
@@ -210,15 +247,54 @@
 <!-- ════════════════════════════════════════
      SECTION 1: ค้นหาห้อง
 ════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════ -->
+<div id="sect-login">
+  <div class="login-card">
+    <h1>ระบบหอพัก</h1>
+    <p class="subtitle">กรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
+    <div class="field">
+      <label for="input-staff-pw">รหัสผ่าน</label>
+      <input id="input-staff-pw" type="password"
+             style="width:100%;padding:14px 12px;font-size:1.1rem;border:2px solid #ddd;border-radius:8px;font-family:inherit"
+             placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+    </div>
+    <button id="btn-staff-login" class="btn btn-primary">เข้าสู่ระบบ</button>
+    <div id="msg-staff-login" class="msg"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MENU
+════════════════════════════════════════ -->
+<div id="sect-menu" hidden>
+  <div class="card" style="max-width:480px;margin:0 auto;padding:24px 20px">
+    <h1 style="margin-bottom:20px">เลือกโหมด</h1>
+    <button id="btn-mode-single" class="menu-btn primary">จดมิเตอร์ทีละห้อง</button>
+    <button id="btn-mode-batch"  class="menu-btn">จด batch ทุกห้อง</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     BATCH PLACEHOLDER
+════════════════════════════════════════ -->
+<div id="sect-batch" hidden>
+  <div class="card text-center" style="max-width:480px;margin:0 auto">
+    <p style="color:#888;margin-bottom:24px;font-size:0.95rem">ฟีเจอร์นี้จะเปิดใช้งานเร็วๆ นี้</p>
+    <button id="btn-batch-back" class="btn btn-ghost">กลับเมนู</button>
+  </div>
+</div>
+
 <!-- ════════ ห้องที่ยังไม่ได้จด ════════ -->
-<div id="sect-missing" class="missing-card">
+<div id="sect-missing" class="missing-card" hidden>
   <div class="missing-title">ยังไม่ได้จด — <span id="missing-month"></span></div>
   <div id="missing-chips" class="room-chips">
     <span style="color:#aaa;font-size:0.85rem">กำลังโหลด...</span>
   </div>
 </div>
 
-<div id="sect-search">
+<div id="sect-search" hidden>
   <div class="card">
     <h1>จดมิเตอร์ห้องพัก</h1>
     <div class="field">
@@ -335,6 +411,7 @@
       บันทึกข้อมูลห้อง <strong id="success-room"></strong> เรียบร้อยแล้ว
     </p>
     <button class="btn btn-primary" id="btn-new">จดห้องถัดไป</button>
+    <button class="btn btn-ghost"   id="btn-back-menu-success" style="margin-top:8px">กลับเมนู</button>
   </div>
 </div>
 
@@ -404,7 +481,75 @@ function removeMissingRoom(roomId) {
   renderMissingChips();
 }
 
-loadMissingRooms();
+// ──────────────────────────────────────────
+// Auth & Navigation
+// ──────────────────────────────────────────
+var ALL_SECTS = ['sect-login','sect-menu','sect-batch','sect-missing','sect-search',
+                 'sect-existing','sect-form','sect-preview','sect-success'];
+
+function _hideAll() {
+  ALL_SECTS.forEach(function(s) { document.getElementById(s).hidden = true; });
+}
+
+function showLogin() {
+  _hideAll();
+  document.getElementById('sect-login').hidden = false;
+}
+
+function showMenu() {
+  _hideAll();
+  document.getElementById('sect-menu').hidden = false;
+}
+
+function showSingleMode() {
+  _hideAll();
+  document.getElementById('sect-missing').hidden = false;
+  document.getElementById('sect-search').hidden = false;
+  loadMissingRooms();
+}
+
+function showBatchMode() {
+  _hideAll();
+  document.getElementById('sect-batch').hidden = false;
+}
+
+// Page load
+if (sessionStorage.getItem('staff_auth') === '1') {
+  showMenu();
+} else {
+  showLogin();
+}
+
+// Login
+document.getElementById('input-staff-pw').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('btn-staff-login').click();
+});
+document.getElementById('btn-staff-login').addEventListener('click', function() {
+  var pw = document.getElementById('input-staff-pw').value;
+  if (!pw) { showMsg('msg-staff-login', 'กรุณากรอกรหัสผ่าน', 'error'); return; }
+  setLoading('btn-staff-login', true, 'กำลังตรวจสอบ...');
+  clearMsg('msg-staff-login');
+  google.script.run
+    .withSuccessHandler(function(ok) {
+      setLoading('btn-staff-login', false, 'เข้าสู่ระบบ');
+      if (ok) {
+        sessionStorage.setItem('staff_auth', '1');
+        showMenu();
+      } else {
+        showMsg('msg-staff-login', 'รหัสผ่านไม่ถูกต้อง', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      setLoading('btn-staff-login', false, 'เข้าสู่ระบบ');
+      showMsg('msg-staff-login', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .checkStaffPassword(pw);
+});
+
+// Menu
+document.getElementById('btn-mode-single').addEventListener('click', showSingleMode);
+document.getElementById('btn-mode-batch').addEventListener('click', showBatchMode);
+document.getElementById('btn-batch-back').addEventListener('click', showMenu);
 
 // ──────────────────────────────────────────
 // Room banner
@@ -631,6 +776,7 @@ document.getElementById('btn-new').addEventListener('click', function() {
   showOnly('sect-search');
   document.getElementById('input-room').focus();
 });
+document.getElementById('btn-back-menu-success').addEventListener('click', showMenu);
 
 // ──────────────────────────────────────────
 // Utilities
