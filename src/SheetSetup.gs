@@ -68,6 +68,122 @@ function _setupTenantHistorySheet(sheet) {
 }
 
 // ------------------------------------------------------------------ //
+// Backup / Restore — ใช้ก่อน/หลังแก้โครงสร้าง Sheet เพื่อไม่ให้ข้อมูลหาย
+// ──────────────────────────────────────────────────────────────────
+// Workflow ทั่วไป:
+//   1. backupRoomData()          → ได้ชื่อ Backup_YYYYMMDD_HHmmss
+//   2. แก้โครงสร้าง (setupSheets / migrate ใดๆ)
+//   3. restoreFromBackup()       → ดึงข้อมูลกลับโดย match roomId
+//
+// หรือใช้ safeSetupSheets() แทน setupSheets() เพื่อทำทั้ง 3 ขั้นอัตโนมัติ
+// ------------------------------------------------------------------ //
+
+function backupRoomData() {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _getSettingsSheet();
+
+  var ts     = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd_HHmmss');
+  var name   = 'Backup_' + ts;
+  var backup = ss.insertSheet(name);
+
+  // rates A1:D3 (header + แถว C + แถว R)
+  var ratesData = sheet.getRange('A1:D3').getValues();
+  backup.getRange(1, 1, ratesData.length, ratesData[0].length).setValues(ratesData);
+
+  // room header + data จาก row 5 ขึ้นไป (col A-J)
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 5) {
+    var roomData = sheet.getRange(5, 1, lastRow - 4, 10).getValues();
+    backup.getRange(5, 1, roomData.length, roomData[0].length).setValues(roomData);
+  }
+
+  SpreadsheetApp.flush();
+  var roomCount = Math.max(0, lastRow - 5);
+  Logger.log('backupRoomData: สร้าง "' + name + '" สำเร็จ (' + roomCount + ' ห้อง)');
+  return name;
+}
+
+// ถ้าไม่ระบุ backupSheetName จะใช้ backup ล่าสุดอัตโนมัติ
+function restoreFromBackup(backupSheetName) {
+  var ss     = SpreadsheetApp.getActiveSpreadsheet();
+  var backup = backupSheetName
+    ? ss.getSheetByName(backupSheetName)
+    : _getLatestBackupSheet(ss);
+
+  if (!backup) throw new Error('ไม่พบ backup sheet' + (backupSheetName ? ' "' + backupSheetName + '"' : ' ใดๆ'));
+
+  var settings = _getSettingsSheet();
+
+  // restore rates A2:D3
+  var ratesBackup = backup.getRange('A2:D3').getValues();
+  if (ratesBackup[0][0]) {
+    settings.getRange('A2:D3').setValues(ratesBackup);
+    Logger.log('restoreFromBackup: rates สำเร็จ');
+  }
+
+  // อ่าน room data จาก backup (row 6+)
+  var backupLastRow = backup.getLastRow();
+  if (backupLastRow < 6) {
+    Logger.log('restoreFromBackup: ไม่มีข้อมูลห้องใน backup');
+    return;
+  }
+  var backupRooms = backup.getRange(6, 1, backupLastRow - 5, 10).getValues();
+
+  // map roomId → cols B-J
+  var backupMap = {};
+  backupRooms.forEach(function(row) {
+    if (row[0]) backupMap[String(row[0])] = row.slice(1);
+  });
+
+  // เขียนกลับโดย match roomId ใน settings ปัจจุบัน
+  var settingsLastRow = settings.getLastRow();
+  if (settingsLastRow < 6) { Logger.log('restoreFromBackup: ไม่มีห้องใน settings'); return; }
+
+  var settingsRooms = settings.getRange(6, 1, settingsLastRow - 5, 1).getValues();
+  var restored = 0, skipped = 0;
+  settingsRooms.forEach(function(row, i) {
+    var roomId = String(row[0]);
+    if (!roomId || !backupMap[roomId]) { skipped++; return; }
+    settings.getRange(i + 6, 2, 1, 9).setValues([backupMap[roomId]]);
+    restored++;
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log('restoreFromBackup: สำเร็จ — restore ' + restored + ' ห้อง, ข้าม ' + skipped + ' (จาก "' + backup.getName() + '")');
+}
+
+function listBackups() {
+  var ss      = SpreadsheetApp.getActiveSpreadsheet();
+  var backups = ss.getSheets().filter(function(s) { return s.getName().indexOf('Backup_') === 0; });
+  if (!backups.length) { Logger.log('ไม่มี backup sheets'); return; }
+  backups.sort(function(a, b) { return a.getName() < b.getName() ? 1 : -1; }); // ล่าสุดก่อน
+  Logger.log('Backup sheets (' + backups.length + ' รายการ):');
+  backups.forEach(function(s, i) { Logger.log((i + 1) + '. ' + s.getName()); });
+}
+
+function _getLatestBackupSheet(ss) {
+  var backups = ss.getSheets().filter(function(s) { return s.getName().indexOf('Backup_') === 0; });
+  if (!backups.length) return null;
+  backups.sort(function(a, b) { return a.getName() < b.getName() ? 1 : -1; });
+  return backups[0];
+}
+
+// safeSetupSheets: backup → setupSheets() → restore ในครั้งเดียว
+// ใช้แทน setupSheets() เสมอเมื่อมีข้อมูลจริงอยู่ใน sheet แล้ว
+function safeSetupSheets() {
+  Logger.log('safeSetupSheets: เริ่ม [1/3] backup...');
+  var backupName = backupRoomData();
+
+  Logger.log('safeSetupSheets: [2/3] setupSheets...');
+  setupSheets();
+
+  Logger.log('safeSetupSheets: [3/3] restore จาก "' + backupName + '"...');
+  restoreFromBackup(backupName);
+
+  Logger.log('safeSetupSheets: เสร็จสมบูรณ์ — ข้อมูลห้องพักได้รับการ restore แล้ว');
+}
+
+// ------------------------------------------------------------------ //
 // Migration: เพิ่ม col G-J (ตั้งค่า) + สร้าง Sheet "ประวัติผู้เช่า"
 // รันครั้งเดียวบน Sheet ที่มีข้อมูลผู้เช่าอยู่แล้ว
 function migrateAddTenantFields() {
