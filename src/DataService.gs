@@ -12,6 +12,12 @@ function _getRecordSheet() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('บันทึก');
 }
 
+function _getTenantHistorySheet() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ประวัติผู้เช่า');
+  if (!sheet) throw new Error('ไม่พบ Sheet "ประวัติผู้เช่า"');
+  return sheet;
+}
+
 function _getPrevMonth(monthYear) {
   var parts = monthYear.split('/');
   var m = parseInt(parts[0]);
@@ -289,41 +295,95 @@ function getOutstandingBalance(roomId) {
   return { outstanding: outstanding };
 }
 
-function checkOutRoom(roomId) {
-  var sheet = _getSettingsSheet();
-  var data  = sheet.getRange('A6:D51').getValues();
+function getCheckOutInfo(roomId) {
+  var data = _getSettingsSheet().getRange('A6:J51').getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] !== roomId) continue;
-    var r = i + 6;
-    sheet.getRange(r, 2).setValue('');
-    sheet.getRange(r, 3).setValue(0);
-    sheet.getRange(r, 4).setValue(0);
-    SpreadsheetApp.flush();
-    return { success: true };
+    var moveInDate = data[i][6] instanceof Date
+      ? Utilities.formatDate(data[i][6], 'Asia/Bangkok', 'dd/MM/yyyy') : (data[i][6] || '');
+    return {
+      name:        data[i][1] || '',
+      phone:       data[i][8] || '',
+      moveInDate:  moveInDate,
+      deposit:     data[i][7] || 0,
+      outstanding: getOutstandingBalance(roomId).outstanding
+    };
   }
   throw new Error('ไม่พบห้อง ' + roomId);
 }
 
+function checkOutRoom(roomId, deductions) {
+  var sheet = _getSettingsSheet();
+  var data  = sheet.getRange('A6:J51').getValues();
+  var rowIndex = -1, name = '', moveInDate = '', deposit = 0, phone = '';
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] !== roomId) continue;
+    rowIndex   = i + 6;
+    name       = data[i][1];
+    moveInDate = data[i][6];
+    deposit    = data[i][7] || 0;
+    phone      = data[i][8] || '';
+    break;
+  }
+  if (rowIndex === -1) throw new Error('ไม่พบห้อง ' + roomId);
+
+  var outstanding = getOutstandingBalance(roomId).outstanding;
+  var d1 = (deductions && deductions.deduct1Amount) || 0;
+  var d2 = (deductions && deductions.deduct2Amount) || 0;
+  var refund = deposit - outstanding - d1 - d2;
+
+  _getTenantHistorySheet().appendRow([
+    roomId, name, phone,
+    moveInDate, new Date(),
+    deposit,
+    (deductions && deductions.deduct1Name) || '', d1,
+    (deductions && deductions.deduct2Name) || '', d2,
+    outstanding, refund
+  ]);
+
+  // ล้างข้อมูลผู้เช่า (col J = note เก็บไว้)
+  sheet.getRange(rowIndex, 2).setValue('');  // ชื่อ
+  sheet.getRange(rowIndex, 3).setValue(0);   // ค่าเช่า
+  sheet.getRange(rowIndex, 4).setValue(0);   // เฟอร์
+  sheet.getRange(rowIndex, 7).setValue('');  // วันย้ายเข้า
+  sheet.getRange(rowIndex, 8).setValue(0);   // มัดจำ
+  sheet.getRange(rowIndex, 9).setValue('');  // เบอร์
+  SpreadsheetApp.flush();
+  return { success: true, refund: refund, outstanding: outstanding };
+}
+
 function getAllRoomsInfo() {
-  var data = _getSettingsSheet().getRange('A6:F51').getValues();
+  var data = _getSettingsSheet().getRange('A6:J51').getValues();
   return data
     .filter(function(r) { return r[0] !== ''; })
     .map(function(r) {
-      return { roomId: r[0], name: r[1], rent: r[2], furniture: r[3], elecInit: r[4], waterInit: r[5] };
+      return {
+        roomId:     r[0], name:      r[1], rent:      r[2], furniture: r[3],
+        elecInit:   r[4], waterInit: r[5],
+        moveInDate: r[6] instanceof Date
+          ? Utilities.formatDate(r[6], 'Asia/Bangkok', 'dd/MM/yyyy') : (r[6] || ''),
+        deposit:    r[7] || 0,
+        phone:      r[8] || '',
+        note:       r[9] || ''
+      };
     });
 }
 
 function updateRoomInfo(roomId, info) {
   var sheet = _getSettingsSheet();
-  var data  = sheet.getRange('A6:F51').getValues();
+  var data  = sheet.getRange('A6:J51').getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] !== roomId) continue;
     var r = i + 6; // data row → sheet row (ข้อมูลเริ่ม row 6)
-    if (info.name      !== undefined) sheet.getRange(r, 2).setValue(info.name);
-    if (info.rent      !== undefined) sheet.getRange(r, 3).setValue(info.rent);
-    if (info.furniture !== undefined) sheet.getRange(r, 4).setValue(info.furniture);
-    if (info.elecInit  !== undefined) sheet.getRange(r, 5).setValue(info.elecInit);
-    if (info.waterInit !== undefined) sheet.getRange(r, 6).setValue(info.waterInit);
+    if (info.name       !== undefined) sheet.getRange(r, 2).setValue(info.name);
+    if (info.rent       !== undefined) sheet.getRange(r, 3).setValue(info.rent);
+    if (info.furniture  !== undefined) sheet.getRange(r, 4).setValue(info.furniture);
+    if (info.elecInit   !== undefined) sheet.getRange(r, 5).setValue(info.elecInit);
+    if (info.waterInit  !== undefined) sheet.getRange(r, 6).setValue(info.waterInit);
+    if (info.moveInDate !== undefined) sheet.getRange(r, 7).setValue(info.moveInDate);
+    if (info.deposit    !== undefined) sheet.getRange(r, 8).setValue(info.deposit);
+    if (info.phone      !== undefined) sheet.getRange(r, 9).setValue(info.phone);
+    if (info.note       !== undefined) sheet.getRange(r, 10).setValue(info.note);
     SpreadsheetApp.flush();
     return;
   }

@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-06-29 (4)
+
+### feat: DataService — checkout with deductions + tenant history (Session 2)
+
+**การเปลี่ยนแปลง**:
+- `_getTenantHistorySheet()` (ใหม่): helper เปิด Sheet "ประวัติผู้เช่า"
+- `getAllRoomsInfo()`: range `A6:F51` → `A6:J51`; เพิ่ม fields moveInDate, deposit, phone, note (format Date → dd/MM/yyyy)
+- `updateRoomInfo()`: range `A6:F51` → `A6:J51`; รองรับ moveInDate (col 7), deposit (col 8), phone (col 9), note (col 10)
+- `getCheckOutInfo(roomId)` (ใหม่): คืน name, phone, moveInDate, deposit, outstanding — สำหรับ checkout modal
+- `checkOutRoom(roomId, deductions)`: เปลี่ยนจาก simple clear → อ่าน J cols, คำนวณ refund = deposit − outstanding − หัก1 − หัก2, append row ใน Sheet "ประวัติผู้เช่า", ล้าง cols 2/3/4/7/8/9 (note col 10 เก็บไว้); คืน `{ success, refund, outstanding }`
+
+---
+
 ## 2026-06-29 (3)
 
 ### feat: SheetSetup — tenant fields G-J + ประวัติผู้เช่า sheet (Session 1)
