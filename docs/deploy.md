@@ -13,11 +13,20 @@ https://script.google.com/d/1uP1yiroqBv4hInGJ1jbQxRyznieX4QWczv4RhLok8qUFKkNZIQ0
 Script Editor → **Project Settings** (ไอคอน ⚙️) → **Script Properties** → Add property
 
 ### Owner (เจ้าของหอ) — เข้าหน้า `?page=admin`
-| Property | Value | หมายเหตุ |
-|----------|-------|---------|
-| `OWNER_PASSWORD` | `รหัสเจ้าของ` | สิทธิ์เต็ม: approve มิเตอร์, แก้ค่าเช่า |
 
-### Staff (พนักงานดูแล) — เข้าหน้า `?page=staff`
+**เจ้าของคนเดียว:**
+| Property | Value |
+|----------|-------|
+| `OWNER_PASSWORD` | `รหัสเจ้าของ` |
+
+**เจ้าของหลายคน (แนะนำ):**
+| Property | Value |
+|----------|-------|
+| `OWNER_PASSWORDS` | `["รหัสคน1","รหัสคน2"]` |
+
+> ถ้ามีทั้ง `OWNER_PASSWORDS` และ `OWNER_PASSWORD` → `OWNER_PASSWORDS` ถูกใช้ก่อนเสมอ
+
+### Staff (พนักงานดูแล) — เข้าหน้า `?page=staff` และ `?page=admin`
 
 **พนักงานคนเดียว:**
 | Property | Value |
@@ -77,11 +86,12 @@ https://docs.google.com/spreadsheets/d/1AVl6OKR59dEVLtIZ7lC_zaIxtCcy2IR3cCB30pPE
 
 URL ทั้ง 3 หน้า:
 
-| หน้า | URL | Login |
-|------|-----|-------|
-| Staff (จดมิเตอร์ทีละห้อง / batch + จัดการบิล) | `...exec?page=staff` | STAFF_PASSWORD |
-| Owner (Dashboard + approve มิเตอร์ + จัดการห้อง) | `...exec?page=admin` | OWNER_PASSWORD |
-| พนักงานจดมิเตอร์อย่างเดียว (legacy) | `...exec?page=meter` | ไม่มี login |
+| หน้า | URL | Login | เห็น |
+|------|-----|-------|------|
+| จดมิเตอร์ (single / batch) | `...exec?page=staff` | STAFF_PASSWORD | จดมิเตอร์ทีละห้อง + batch ทั้งตึก |
+| Admin — staff login | `...exec?page=admin` | STAFF_PASSWORD | tab บิล + ห้อง (จำกัด) |
+| Admin — owner login | `...exec?page=admin` | OWNER_PASSWORD | ทุก tab รวม Dashboard + อนุมัติมิเตอร์ |
+| พนักงานจดมิเตอร์อย่างเดียว (legacy) | `...exec?page=meter` | ไม่มี login | จดมิเตอร์เท่านั้น ไม่เห็นยอดเงิน |
 
 ### `/exec` vs `/dev`
 
@@ -126,4 +136,4 @@ Script Editor → **Deploy** → **Manage deployments** → เลือก depl
 2. Script Editor → **Share** → โอน Ownership เช่นกัน
 3. เจ้าของต้อง **Deploy ใหม่** (New deployment) เพื่อให้ "Execute as: Me" เป็น account ของเจ้าของ
    - URL จะเปลี่ยน → แจ้ง URL ใหม่ให้พนักงาน
-4. ตั้ง Script Properties ใหม่ใน account ของเจ้าของ: `OWNER_PASSWORD` และ `STAFF_PASSWORDS`
+4. ตั้ง Script Properties ใหม่ใน account ของเจ้าของ: `OWNER_PASSWORDS` (หรือ `OWNER_PASSWORD`) และ `STAFF_PASSWORDS` (หรือ `STAFF_PASSWORD`)
