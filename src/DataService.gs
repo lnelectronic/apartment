@@ -231,6 +231,35 @@ function _mergeMeterStatus(currentStatus, meterType) {
   return currentStatus; // re-save ประเภทเดิม หรือ draft อยู่แล้ว → คงสถานะ
 }
 
+function getMonthMeterSummary(monthStr) {
+  var allData = _getRecordSheet().getDataRange().getValues();
+  var nameMap = {};
+  _getSettingsSheet().getRange('A6:B51').getValues().forEach(function(r) {
+    if (r[0]) nameMap[r[0]] = r[1];
+  });
+
+  var rooms = [], warnings = [], vacantAlerts = [];
+  for (var i = 1; i < allData.length; i++) {
+    var d = allData[i];
+    if (_toMonthYear(d[0]) !== monthStr) continue;
+    var roomId      = d[1];
+    var tenantName  = nameMap[roomId] || '';
+    var isEmpty     = !tenantName;
+    var elecUsed    = Number(d[4])  || 0;
+    var waterUsed   = Number(d[8])  || 0;
+    var meterStatus = d[22]         || '';
+    rooms.push({
+      room: roomId, tenantName: tenantName, isEmpty: isEmpty,
+      elecStart: d[2],  elecEnd:   d[3],  elecUsed:   elecUsed,
+      waterStart: d[6], waterEnd:  d[7],  waterUsed:  waterUsed,
+      meterStatus: meterStatus
+    });
+    if (meterStatus === 'draft-elec' || meterStatus === 'draft-water') warnings.push(roomId);
+    if (isEmpty && (elecUsed > 0 || waterUsed > 0)) vacantAlerts.push(roomId);
+  }
+  return { rooms: rooms, warnings: warnings, vacantAlerts: vacantAlerts };
+}
+
 // เปลี่ยน status มิเตอร์ทุกห้องของเดือนนั้นจาก draft* → confirmed
 function confirmMonth(monthStr) {
   var sheet    = _getRecordSheet();

@@ -299,7 +299,7 @@
   <div class="card" style="max-width:480px;margin:0 auto;padding:24px 20px">
     <h1 style="margin-bottom:20px">เลือกโหมด</h1>
     <button id="btn-mode-single" class="menu-btn primary">จดมิเตอร์ทีละห้อง</button>
-    <button id="btn-mode-batch"  class="menu-btn">จด batch ทุกห้อง</button>
+    <button id="btn-mode-batch"  class="menu-btn">จดมิเตอร์แบบกลุ่ม</button>
   </div>
 </div>
 
@@ -311,8 +311,8 @@
   <!-- Step 1: เลือก session -->
   <div id="batch-step-select">
     <div class="card" style="max-width:480px;margin:0 auto;padding:24px 20px">
-      <h2 style="margin-bottom:6px">จด batch ทุกห้อง</h2>
-      <p style="color:#888;font-size:0.9rem;margin-bottom:20px">เลือก session ที่ต้องการจด</p>
+      <h2 style="margin-bottom:6px">จดมิเตอร์แบบกลุ่ม</h2>
+      <p style="color:#888;font-size:0.9rem;margin-bottom:20px">เลือกกลุ่มที่ต้องการจด</p>
       <button class="menu-btn primary batch-session-btn" data-building="C" data-type="elec">ตึง C &nbsp;&#x26A1; ไฟ</button>
       <button class="menu-btn batch-session-btn"         data-building="C" data-type="water">ตึง C &nbsp;&#x1F4A7; น้ำ</button>
       <button class="menu-btn batch-session-btn"         data-building="R" data-type="elec">ตึง R &nbsp;&#x26A1; ไฟ</button>
@@ -337,7 +337,7 @@
           </table>
         </div>
         <button class="btn btn-primary" id="btn-batch-submit"       style="margin-top:16px">ตรวจสอบยอด</button>
-        <button class="btn btn-ghost"   id="btn-batch-back-select"  style="margin-top:8px">เลือก session อื่น</button>
+        <button class="btn btn-ghost"   id="btn-batch-back-select"  style="margin-top:8px">เลือกกลุ่มอื่น</button>
         <div id="msg-batch-table" class="msg"></div>
       </div>
     </div>
@@ -369,7 +369,7 @@
       <div class="success-circle">&#10003;</div>
       <h2>บันทึกสำเร็จ!</h2>
       <p id="batch-done-msg" style="color:#555;margin:8px 0 24px"></p>
-      <button class="btn btn-primary" id="btn-batch-done-new">จด session อื่น</button>
+      <button class="btn btn-primary" id="btn-batch-done-new">จดกลุ่มอื่น</button>
       <button class="btn btn-ghost"   id="btn-batch-done-menu" style="margin-top:8px">กลับเมนู</button>
     </div>
   </div>
@@ -707,7 +707,7 @@ function loadBatchTable() {
   clearMsg('msg-batch-table');
   document.getElementById('batch-thead').innerHTML = '';
   document.getElementById('batch-tbody').innerHTML =
-    '<tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa">กำลังโหลด...</td></tr>';
+    '<tr><td colspan="3" style="text-align:center;padding:20px;color:#aaa">กำลังโหลด...</td></tr>';
   showBatchStep('batch-step-table');
 
   google.script.run
@@ -727,7 +727,6 @@ function renderBatchTable() {
   document.getElementById('batch-thead').innerHTML =
     '<tr>'
     + '<th style="text-align:left;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ห้อง</th>'
-    + '<th style="text-align:left;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ผู้เช่า</th>'
     + '<th style="text-align:right;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">เริ่ม</th>'
     + '<th style="text-align:center;padding:8px 6px;font-size:0.82rem;color:#555;border-bottom:2px solid #ddd;white-space:nowrap">ถึง (' + typeLabel + ')</th>'
     + '</tr>';
@@ -735,12 +734,9 @@ function renderBatchTable() {
   document.getElementById('batch-tbody').innerHTML = B.rooms.map(function(room, idx) {
     var inputId = 'batch-end-' + idx;
     var prefill = room.existingEnd !== null ? room.existingEnd : '';
-    var nameCell = room.isEmpty
-      ? '<span style="color:#aaa;font-style:italic">(ว่าง)</span>'
-      : room.tenantName;
+    var roomLabel = room.room + (room.isEmpty ? ' <span style="color:#aaa;font-size:0.78rem">(ว่าง)</span>' : '');
     return '<tr style="border-bottom:1px solid #f0f0f0">'
-      + '<td style="padding:8px 6px;font-weight:600;white-space:nowrap">' + room.room + '</td>'
-      + '<td style="padding:8px 6px;font-size:0.9rem;color:#333;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + nameCell + '</td>'
+      + '<td style="padding:8px 6px;font-weight:700;white-space:nowrap">' + roomLabel + '</td>'
       + '<td style="padding:8px 6px;text-align:right;color:#666;white-space:nowrap">' + room.prevMeter + '</td>'
       + '<td style="padding:4px 6px;white-space:nowrap">'
       +   '<input type="number" id="' + inputId + '" min="0" placeholder="—"'

@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-29 (11)
+
+### feat: Owner Approval Screen (Session 5 — plan-batch-meter)
+
+**การเปลี่ยนแปลง**:
+- `DataService.gs`:
+  - `getMonthMeterSummary(monthStr)` (ใหม่): ดึงทุก row ของเดือนนั้น คืน `{rooms, warnings, vacantAlerts}` — `rooms` แต่ละตัวมี room, tenantName, isEmpty, elecStart/End/Used, waterStart/End/Used, meterStatus; `warnings` = list ห้องที่ status เป็น draft-elec หรือ draft-water; `vacantAlerts` = ห้องว่างที่ elecUsed > 0 หรือ waterUsed > 0
+
+- `admin.html`:
+  - **tab-meter HTML**: เปลี่ยน title เป็น "ตรวจ & อนุมัติมิเตอร์"; เพิ่ม `#btn-approve-meter` (Approve ทั้งเดือน); เพิ่ม `#meter-warning` banner; เพิ่ม column "สถานะ" และ "แก้" ใน table header
+  - **`_fetchMeterData()`**: เปลี่ยนจากเรียก `getDashboardData` → `getMonthMeterSummary`; clear warning banner ก่อนโหลด; เรียก `_renderMeterWarning` หลังโหลด
+  - **`_renderMeterWarning(warnings, vacantAlerts)`** (ใหม่): แสดง banner สีเหลืองถ้ามีห้องที่ข้อมูลไม่ครบหรือห้องว่างที่มีการใช้งาน
+  - **`_meterStatusBadge(status)`** (ใหม่): คืน badge HTML สีตาม status (confirmed=เขียว, draft=เหลือง, draft-elec/draft-water=แดง)
+  - **`_renderMeterTab(rooms)`**: อัปเดตรับ field ชื่อใหม่ (r.room, r.tenantName แทน r.roomId, r.name); แสดง status badge ต่อแถว; highlight ห้องว่างที่ใช้งาน (background แดง + ⚠ badge); link "แก้" ไปยัง staff page
+  - **`approveMeterMonth()`** (ใหม่): confirm dialog → เรียก `confirmMonth()` → refresh ตาราง; ปุ่ม disable ระหว่างโหลด
+
+---
+
 ## 2026-06-29 (10)
 
 ### feat: Batch Meter Entry UI (Session 4 — plan-batch-meter)

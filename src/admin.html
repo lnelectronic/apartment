@@ -350,10 +350,12 @@
   <div id="tab-meter" class="content" hidden>
     <div class="card">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <div class="card-title" style="margin:0">สรุปการใช้ไฟ / น้ำ</div>
+        <div class="card-title" style="margin:0">ตรวจ &amp; อนุมัติมิเตอร์</div>
         <select id="meter-month-sel" class="txt-sm" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem"></select>
+        <button id="btn-approve-meter" class="btn btn-success btn-sm" onclick="approveMeterMonth()" style="margin-left:auto">Approve ทั้งเดือน</button>
       </div>
       <div id="meter-msg" class="alert" style="display:none;margin-bottom:12px"></div>
+      <div id="meter-warning" class="alert warning" style="display:none;margin-bottom:12px"></div>
       <div id="meter-loading" class="loading-box" style="display:none">
         <span class="spinner spinner-dark"></span> กำลังโหลด...
       </div>
@@ -365,6 +367,7 @@
                 <th>ห้อง</th><th>ชื่อผู้เช่า</th>
                 <th style="color:#e67e22">ไฟ-เริ่ม</th><th style="color:#e67e22">ไฟ-ถึง</th><th style="color:#e67e22">ไฟ-ใช้</th>
                 <th style="color:#2980b9">น้ำ-เริ่ม</th><th style="color:#2980b9">น้ำ-ถึง</th><th style="color:#2980b9">น้ำ-ใช้</th>
+                <th>สถานะ</th><th></th>
               </tr>
             </thead>
             <tbody id="meter-tbody"></tbody>
@@ -587,6 +590,7 @@ function fmt(n)      { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtB(n)     { return fmt(n) + ' บาท'; }
 
 document.getElementById('link-staff').href = '<?= appUrl ?>?page=staff';
+var _staffPageUrl = '<?= appUrl ?>?page=staff';
 
 // ──────────────────────────────────────────
 // Session
@@ -902,43 +906,98 @@ function _fetchMeterData(monthYear) {
   loading.style.display = 'block';
   content.hidden = true;
   clearEl('meter-msg');
+  clearEl('meter-warning');
   google.script.run
     .withSuccessHandler(function(data) {
       loading.style.display = 'none';
+      _renderMeterWarning(data.warnings || [], data.vacantAlerts || []);
       _renderMeterTab(data.rooms || []);
     })
     .withFailureHandler(function(err) {
       loading.style.display = 'none';
       showMsg('meter-msg', 'โหลดไม่สำเร็จ: ' + err.message, 'error');
     })
-    .getDashboardData(monthYear);
+    .getMonthMeterSummary(monthYear);
+}
+
+function _renderMeterWarning(warnings, vacantAlerts) {
+  var el = document.getElementById('meter-warning');
+  var parts = [];
+  if (warnings.length > 0) {
+    parts.push('<strong>ข้อมูลมิเตอร์ไม่ครบ (' + warnings.length + ' ห้อง):</strong> ' + warnings.join(', '));
+  }
+  if (vacantAlerts.length > 0) {
+    parts.push('<strong>ห้องว่างที่มีการใช้งาน:</strong> ' + vacantAlerts.join(', '));
+  }
+  if (parts.length > 0) {
+    el.innerHTML = parts.join('<br>');
+    el.style.display = 'block';
+  }
+}
+
+function _meterStatusBadge(status) {
+  if (status === 'confirmed')   return '<span class="badge" style="background:#e8fdf0;color:#27ae60">confirmed</span>';
+  if (status === 'draft')       return '<span class="badge" style="background:#fff8e1;color:#e67e22">draft</span>';
+  if (status === 'draft-elec')  return '<span class="badge" style="background:#fde8e8;color:#e74c3c">draft-elec</span>';
+  if (status === 'draft-water') return '<span class="badge" style="background:#fde8e8;color:#e74c3c">draft-water</span>';
+  return '';
 }
 
 function _renderMeterTab(rooms) {
-  var rows = rooms.filter(function(r) { return r.elecEnd || r.waterEnd; });
   var totalElec = 0, totalWater = 0;
-  document.getElementById('meter-tbody').innerHTML = rows.map(function(r) {
+  document.getElementById('meter-tbody').innerHTML = rooms.map(function(r) {
     totalElec  += r.elecUsed  || 0;
     totalWater += r.waterUsed || 0;
-    return '<tr>'
-      + '<td class="room-id-lbl">' + r.roomId + '</td>'
-      + '<td>' + escHtml(r.name || '') + '</td>'
+    var isVacantAlert = r.isEmpty && ((r.elecUsed || 0) > 0 || (r.waterUsed || 0) > 0);
+    var rowStyle = isVacantAlert ? ' style="background:#fff0f0"' : '';
+    var vacantFlag = isVacantAlert ? ' <span style="color:#e74c3c;font-size:0.75rem;font-weight:600">⚠ว่าง</span>' : '';
+    return '<tr' + rowStyle + '>'
+      + '<td class="room-id-lbl">' + r.room + vacantFlag + '</td>'
+      + '<td>' + escHtml(r.tenantName || '(ว่าง)') + '</td>'
       + '<td>' + (r.elecStart  || 0) + '</td>'
       + '<td>' + (r.elecEnd    || 0) + '</td>'
       + '<td><strong style="color:#e67e22">' + (r.elecUsed  || 0) + '</strong></td>'
       + '<td>' + (r.waterStart || 0) + '</td>'
       + '<td>' + (r.waterEnd   || 0) + '</td>'
       + '<td><strong style="color:#2980b9">' + (r.waterUsed || 0) + '</strong></td>'
+      + '<td>' + _meterStatusBadge(r.meterStatus) + '</td>'
+      + '<td><a href="' + _staffPageUrl + '" target="_blank" class="btn btn-ghost btn-sm">แก้</a></td>'
       + '</tr>';
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">ยังไม่มีข้อมูลเดือนนี้</td></tr>';
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">ยังไม่มีข้อมูลเดือนนี้</td></tr>';
   document.getElementById('meter-tfoot').innerHTML =
     '<tr style="background:#f5f7fa;font-weight:700">'
     + '<td colspan="4" style="text-align:right;padding:10px 12px;color:#555">รวมทั้งหมด</td>'
     + '<td style="padding:10px 12px;color:#e67e22">' + totalElec + ' หน่วย</td>'
     + '<td colspan="2" style="text-align:right;padding:10px 12px;color:#555">รวมทั้งหมด</td>'
     + '<td style="padding:10px 12px;color:#2980b9">' + totalWater + ' หน่วย</td>'
+    + '<td colspan="2"></td>'
     + '</tr>';
   document.getElementById('meter-content').hidden = false;
+}
+
+function approveMeterMonth() {
+  var monthYear = document.getElementById('meter-month-sel').value;
+  if (!monthYear) return;
+  if (!confirm('อนุมัติมิเตอร์เดือน ' + monthYear + ' ทั้งหมด?\n(status จะเปลี่ยนเป็น confirmed ทุกห้อง)')) return;
+
+  var btn = document.getElementById('btn-approve-meter');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังอนุมัติ...';
+  clearEl('meter-msg');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+      btn.innerHTML = 'Approve ทั้งเดือน';
+      showMsg('meter-msg', 'อนุมัติมิเตอร์ ' + res.confirmed + ' ห้อง เรียบร้อย', 'success');
+      _fetchMeterData(monthYear);
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = 'Approve ทั้งเดือน';
+      showMsg('meter-msg', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .confirmMonth(monthYear);
 }
 
 // ──────────────────────────────────────────
