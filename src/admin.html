@@ -207,19 +207,9 @@
     /* ── Misc ── */
     @media (max-width: 600px) {
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .room-grid-hdr { grid-template-columns: 55px 1fr 80px; }
-      .room-grid-row {
-        grid-template-columns: 55px 1fr 80px;
-        grid-template-rows: auto auto;
-      }
-      .room-grid-hdr > :nth-child(4),
-      .room-grid-row > :nth-child(4),
-      .room-grid-hdr > :nth-child(5),
-      .room-grid-row > :nth-child(5),
-      .room-grid-hdr > :nth-child(6),
-      .room-grid-row > :nth-child(6),
-      .room-grid-hdr > :nth-child(7) { display: none; }
-      .room-grid-row > :nth-child(7) { grid-column: 1 / -1; display: flex; }
+      .room-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .room-grid-hdr,
+      .room-grid-row { min-width: 680px; }
     }
 
     /* ── Print ── */
@@ -363,11 +353,15 @@
       </div>
       <div id="rooms-content" hidden>
         <div class="group-hdr">ตึก C (ชยางกูร)</div>
-        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
-        <div id="rooms-c"></div>
+        <div class="room-grid-wrap">
+          <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
+          <div id="rooms-c"></div>
+        </div>
         <div class="group-hdr">ตึก R (Runway)</div>
-        <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
-        <div id="rooms-r"></div>
+        <div class="room-grid-wrap">
+          <div class="room-grid-hdr"><div>ห้อง</div><div>ชื่อ</div><div>เช่า</div><div>เฟอร์</div><div>ไฟเริ่ม</div><div>น้ำเริ่ม</div><div></div></div>
+          <div id="rooms-r"></div>
+        </div>
       </div>
     </div>
   </div>
