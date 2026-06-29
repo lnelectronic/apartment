@@ -4,6 +4,56 @@
 
 ---
 
+## 2026-06-29 (14)
+
+### fix: Approve button disabled จนกว่าทุก 47 ห้องจะมีข้อมูลมิเตอร์ครบ
+
+**ปัญหา**: ปุ่ม "Approve ทั้งเดือน" กดได้แม้ staff ยังจดมิเตอร์ไม่ครบ เช่น ตึง C ส่งแค่ไฟ ยังไม่มีน้ำ
+
+**สาเหตุ**: `getMonthMeterSummary` สร้าง `warnings` จาก rows ที่มีอยู่ใน "บันทึก" เท่านั้น (status = draft-elec/draft-water) ไม่ตรวจห้องที่ไม่มี row เลยในเดือนนั้น — UI แสดง warning banner แต่ไม่ได้ disable ปุ่ม
+
+**แก้ไข**:
+- `DataService.gs` — `getMonthMeterSummary()`: เพิ่ม loop รอบสอง เช็คทุกห้องใน nameMap ว่ามี row ในเดือนนั้นหรือเปล่า ถ้าไม่มีเพิ่มเข้า `warnings`
+- `admin.html` — `_fetchMeterData()` success handler: `btn-approve-meter.disabled = warnings.length > 0`
+
+**commit**: `feea28e`
+
+---
+
+## 2026-06-29 (13)
+
+### feat: OWNER_PASSWORDS array — รองรับเจ้าของหลายคน (Code.gs)
+
+**การเปลี่ยนแปลง**:
+- `checkAdminLogin()`: ตรวจ `OWNER_PASSWORDS` (JSON array) ก่อน `OWNER_PASSWORD` (key เดียว) — เหมือน pattern ของ `STAFF_PASSWORDS`
+- ถ้ามี `OWNER_PASSWORDS` จะ ignore `OWNER_PASSWORD` เลย
+
+**commit**: `771fc4b`
+
+---
+
+## 2026-06-29 (12)
+
+### feat: Admin Dual Login + Lock ค่าเช่า/ค่าเฟอร์นิเจอร์ (Session 6 — plan-batch-meter)
+
+**การเปลี่ยนแปลง**:
+- `Code.gs`:
+  - `checkAdminLogin(pw)` (ใหม่): คืน `{ok, role}` — ตรวจ OWNER_PASSWORD → `role:'owner'`; ตรวจ STAFF_PASSWORDS/STAFF_PASSWORD → `role:'staff'`; ไม่ match → `{ok:false}`
+  - คง `checkPassword()` และ `checkStaffPassword()` ไว้ (ใช้โดย admin.html เดิมและ staff.html)
+
+- `admin.html`:
+  - `S.role` (ใหม่): เก็บ role ปัจจุบัน, persist ผ่าน `sessionStorage('admin_role')`
+  - Login: เปลี่ยน `.checkPassword()` → `.checkAdminLogin()`, เก็บ role ใน sessionStorage
+  - `applyRole(role)` (ใหม่): staff → ซ่อน nav-btn dashboard + meter → switchTab('billing'); owner → ไม่เปลี่ยน
+  - `showAdmin()`: เรียก `applyRole(S.role)` และโหลด dashboard เฉพาะ owner
+  - Logout: ล้าง `admin_role` + reset nav visibility + reset `S.role = 'owner'`
+  - `renderRoomRows()`: staff → column ค่าเช่า/เฟอร์นิเจอร์/มัดจำ/วันย้ายเข้า เป็น `readonly` style จาง; ซ่อนปุ่ม ⚙, ย้ายออก, ย้ายเข้า
+  - `saveRoomRow()`: staff ส่งเฉพาะ `{name, phone}` ไปยัง `updateRoomInfo()`; owner ส่งทุก field เหมือนเดิม
+
+**commit**: `12116b9`
+
+---
+
 ## 2026-06-29 (11)
 
 ### feat: Owner Approval Screen (Session 5 — plan-batch-meter)
