@@ -223,6 +223,30 @@
     .menu-btn:active { background: #f5f5f5; }
     .menu-btn.primary { border-color: #0066cc; color: #0066cc; }
 
+    /* ─── Mode toggle ─── */
+    .mode-group {
+      display: flex;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 10px 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-right: 1px solid #ddd;
+      background: white;
+      color: #555;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn:last-child { border-right: none; }
+    .mode-btn.active { background: #0066cc; color: white; }
+
     /* ─── Missing rooms ─── */
     .missing-card {
       background: white; border-radius: 12px;
@@ -329,27 +353,38 @@
   <div class="card">
     <div id="form-banner" class="room-banner"></div>
 
-    <p class="section-label">มิเตอร์ไฟฟ้า</p>
-    <div class="field-row">
-      <div>
-        <label>เริ่ม (หน่วย)</label>
-        <input id="elec-start" type="number" readonly>
-      </div>
-      <div>
-        <label>ถึง (หน่วย)</label>
-        <input id="elec-end" type="number" placeholder="กรอก" min="0">
+    <p class="section-label">ประเภทมิเตอร์</p>
+    <div class="mode-group">
+      <button class="mode-btn" data-mode="elec">ไฟ</button>
+      <button class="mode-btn" data-mode="water">น้ำ</button>
+      <button class="mode-btn active" data-mode="both">ทั้งคู่</button>
+    </div>
+
+    <div id="sect-elec-fields">
+      <p class="section-label">มิเตอร์ไฟฟ้า</p>
+      <div class="field-row">
+        <div>
+          <label>เริ่ม (หน่วย)</label>
+          <input id="elec-start" type="number" readonly>
+        </div>
+        <div>
+          <label>ถึง (หน่วย)</label>
+          <input id="elec-end" type="number" placeholder="กรอก" min="0">
+        </div>
       </div>
     </div>
 
-    <p class="section-label">มิเตอร์น้ำประปา</p>
-    <div class="field-row">
-      <div>
-        <label>เริ่ม (หน่วย)</label>
-        <input id="water-start" type="number" readonly>
-      </div>
-      <div>
-        <label>ถึง (หน่วย)</label>
-        <input id="water-end" type="number" placeholder="กรอก" min="0">
+    <div id="sect-water-fields">
+      <p class="section-label">มิเตอร์น้ำประปา</p>
+      <div class="field-row">
+        <div>
+          <label>เริ่ม (หน่วย)</label>
+          <input id="water-start" type="number" readonly>
+        </div>
+        <div>
+          <label>ถึง (หน่วย)</label>
+          <input id="water-end" type="number" placeholder="กรอก" min="0">
+        </div>
       </div>
     </div>
 
@@ -388,7 +423,7 @@
 ════════════════════════════════════════ -->
 <div id="sect-preview" hidden>
   <div class="card">
-    <h2>ยอดรวมประมาณการ</h2>
+    <h2 id="preview-title">ยอดรวมประมาณการ</h2>
     <p style="font-size:0.9rem;color:#888;margin-bottom:16px">
       เดือน <span id="preview-month" class="month-badge"></span>
       &nbsp;· ห้อง <span id="preview-room" style="font-weight:600"></span>
@@ -427,7 +462,8 @@ var S = {
   existing:    null,
   prevMeter:   null,
   prevBalance: 0,
-  saveData:    null
+  saveData:    null,
+  meterMode:   'both'
 };
 
 function currentMonthYear() {
@@ -512,6 +548,21 @@ function showBatchMode() {
   _hideAll();
   document.getElementById('sect-batch').hidden = false;
 }
+
+function updateMeterSections() {
+  document.getElementById('sect-elec-fields').hidden  = (S.meterMode === 'water');
+  document.getElementById('sect-water-fields').hidden = (S.meterMode === 'elec');
+}
+
+document.querySelectorAll('.mode-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    S.meterMode = this.dataset.mode;
+    updateMeterSections();
+    clearMsg('msg-form');
+  });
+});
 
 // Page load
 if (sessionStorage.getItem('staff_auth') === '1') {
@@ -642,6 +693,18 @@ function loadForm(isEdit) {
   var pm = S.prevMeter;
   var ex = S.existing;
 
+  // Set meterMode: ถ้าแก้ไข draft ที่ขาดข้อมูลด้านใดด้านหนึ่ง ให้ pre-select ด้านที่ยังขาด
+  var defaultMode = 'both';
+  if (isEdit && ex) {
+    if (ex.meterStatus === 'draft-elec') defaultMode = 'water';
+    else if (ex.meterStatus === 'draft-water') defaultMode = 'elec';
+  }
+  S.meterMode = defaultMode;
+  document.querySelectorAll('.mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === S.meterMode);
+  });
+  updateMeterSections();
+
   var elecStart, waterStart;
   if (isEdit && ex) {
     elecStart  = ex.elecStart;
@@ -669,20 +732,26 @@ function loadForm(isEdit) {
 document.getElementById('btn-calc').addEventListener('click', function() {
   var elecStart  = parseFloat(document.getElementById('elec-start').value)  || 0;
   var waterStart = parseFloat(document.getElementById('water-start').value) || 0;
-  var elecEnd    = parseFloat(document.getElementById('elec-end').value);
-  var waterEnd   = parseFloat(document.getElementById('water-end').value);
+  var elecEnd  = elecStart;
+  var waterEnd = waterStart;
 
-  if (isNaN(elecEnd)  || elecEnd < 0) {
-    showMsg('msg-form', 'กรุณากรอกมิเตอร์ไฟ "ถึง" ให้ถูกต้อง', 'error'); return;
+  if (S.meterMode === 'elec' || S.meterMode === 'both') {
+    elecEnd = parseFloat(document.getElementById('elec-end').value);
+    if (isNaN(elecEnd) || elecEnd < 0) {
+      showMsg('msg-form', 'กรุณากรอกมิเตอร์ไฟ "ถึง" ให้ถูกต้อง', 'error'); return;
+    }
+    if (elecEnd < elecStart) {
+      showMsg('msg-form', 'มิเตอร์ไฟ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + elecStart + ')', 'error'); return;
+    }
   }
-  if (isNaN(waterEnd) || waterEnd < 0) {
-    showMsg('msg-form', 'กรุณากรอกมิเตอร์น้ำ "ถึง" ให้ถูกต้อง', 'error'); return;
-  }
-  if (elecEnd < elecStart) {
-    showMsg('msg-form', 'มิเตอร์ไฟ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + elecStart + ')', 'error'); return;
-  }
-  if (waterEnd < waterStart) {
-    showMsg('msg-form', 'มิเตอร์น้ำ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + waterStart + ')', 'error'); return;
+  if (S.meterMode === 'water' || S.meterMode === 'both') {
+    waterEnd = parseFloat(document.getElementById('water-end').value);
+    if (isNaN(waterEnd) || waterEnd < 0) {
+      showMsg('msg-form', 'กรุณากรอกมิเตอร์น้ำ "ถึง" ให้ถูกต้อง', 'error'); return;
+    }
+    if (waterEnd < waterStart) {
+      showMsg('msg-form', 'มิเตอร์น้ำ "ถึง" ต้องไม่น้อยกว่า "เริ่ม" (' + waterStart + ')', 'error'); return;
+    }
   }
 
   var item1Name   = document.getElementById('item1-name').value.trim();
@@ -690,25 +759,39 @@ document.getElementById('btn-calc').addEventListener('click', function() {
   var item2Name   = document.getElementById('item2-name').value.trim();
   var item2Amount = parseFloat(document.getElementById('item2-amount').value) || 0;
 
-  var elecUsed    = elecEnd   - elecStart;
-  var waterUsed   = waterEnd  - waterStart;
-  var elecAmount  = elecUsed  * S.rates.electricity;
-  var waterAmount = waterUsed * S.rates.water;
-  var total = S.room.rent + S.room.furniture
-            + elecAmount + waterAmount
-            + S.prevBalance
-            + item1Amount + item2Amount;
+  var rows = [];
+  var total = 0;
+  var previewTitle = 'ยอดรวมประมาณการ';
 
-  // Build summary table
-  var rows = [
-    { lbl: 'ค่าเช่า',         val: S.room.rent },
-    { lbl: 'ค่าเฟอร์นิเจอร์', val: S.room.furniture },
-    { lbl: 'ค่าไฟ (' + elecUsed  + ' หน่วย × ' + S.rates.electricity + ')', val: elecAmount  },
-    { lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย × ' + S.rates.water + ')',       val: waterAmount }
-  ];
-  if (S.prevBalance !== 0) rows.push({ lbl: 'ค้างเดือนก่อน', val: S.prevBalance });
-  if (item1Amount)         rows.push({ lbl: item1Name || 'รายการที่ 1', val: item1Amount });
-  if (item2Amount)         rows.push({ lbl: item2Name || 'รายการที่ 2', val: item2Amount });
+  if (S.meterMode === 'both') {
+    var elecUsed    = elecEnd - elecStart;
+    var waterUsed   = waterEnd - waterStart;
+    var elecAmount  = elecUsed * S.rates.electricity;
+    var waterAmount = waterUsed < 6 ? S.rates.waterMin : waterUsed * S.rates.water;
+    total = S.room.rent + S.room.furniture + elecAmount + waterAmount + S.prevBalance + item1Amount + item2Amount;
+    rows = [
+      { lbl: 'ค่าเช่า',         val: S.room.rent },
+      { lbl: 'ค่าเฟอร์นิเจอร์', val: S.room.furniture },
+      { lbl: 'ค่าไฟ (' + elecUsed  + ' หน่วย × ' + S.rates.electricity + ')', val: elecAmount  },
+      { lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย × ' + S.rates.water + ')',       val: waterAmount }
+    ];
+    if (S.prevBalance !== 0) rows.push({ lbl: 'ค้างเดือนก่อน', val: S.prevBalance });
+  } else if (S.meterMode === 'elec') {
+    var elecUsed   = elecEnd - elecStart;
+    var elecAmount = elecUsed * S.rates.electricity;
+    total = elecAmount + item1Amount + item2Amount;
+    rows  = [{ lbl: 'ค่าไฟ (' + elecUsed + ' หน่วย × ' + S.rates.electricity + ')', val: elecAmount }];
+    previewTitle = 'ยืนยันบันทึกมิเตอร์ไฟ';
+  } else {
+    var waterUsed   = waterEnd - waterStart;
+    var waterAmount = waterUsed < 6 ? S.rates.waterMin : waterUsed * S.rates.water;
+    total = waterAmount + item1Amount + item2Amount;
+    rows  = [{ lbl: 'ค่าน้ำ (' + waterUsed + ' หน่วย × ' + S.rates.water + ')', val: waterAmount }];
+    previewTitle = 'ยืนยันบันทึกมิเตอร์น้ำ';
+  }
+
+  if (item1Amount) rows.push({ lbl: item1Name || 'รายการที่ 1', val: item1Amount });
+  if (item2Amount) rows.push({ lbl: item2Name || 'รายการที่ 2', val: item2Amount });
 
   var html = rows.map(function(r) {
     return '<div class="summary-row">'
@@ -716,14 +799,16 @@ document.getElementById('btn-calc').addEventListener('click', function() {
          + '<span class="val">' + fmt(r.val) + ' บาท</span>'
          + '</div>';
   }).join('');
+  var totalLabel = S.meterMode === 'both' ? 'รวมทั้งหมด' : 'รวม (บันทึกแบบร่าง)';
   html += '<div class="summary-row total">'
-        + '<span class="lbl">รวมทั้งหมด</span>'
+        + '<span class="lbl">' + totalLabel + '</span>'
         + '<span class="val">' + fmt(total) + ' บาท</span>'
         + '</div>';
 
-  document.getElementById('summary-rows').innerHTML = html;
-  document.getElementById('preview-month').textContent = S.monthYear;
-  document.getElementById('preview-room').textContent  = S.roomId;
+  document.getElementById('preview-title').textContent  = previewTitle;
+  document.getElementById('summary-rows').innerHTML     = html;
+  document.getElementById('preview-month').textContent  = S.monthYear;
+  document.getElementById('preview-room').textContent   = S.roomId;
 
   S.saveData = {
     monthYear:   S.monthYear,
@@ -764,7 +849,7 @@ document.getElementById('btn-save').addEventListener('click', function() {
       setLoading('btn-save', false, 'บันทึก');
       showMsg('msg-save', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .saveRecord(S.saveData);
+    .saveRecord(S.saveData, S.meterMode);
 });
 
 // ──────────────────────────────────────────
