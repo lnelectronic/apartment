@@ -274,23 +274,7 @@
 <!-- ════════════════════════════════════════
      SECTION 1: ค้นหาห้อง
 ════════════════════════════════════════ -->
-<!-- ════════════════════════════════════════
-     LOGIN
-════════════════════════════════════════ -->
-<div id="sect-login">
-  <div class="login-card">
-    <h1>ระบบหอพัก</h1>
-    <p class="subtitle">กรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
-    <div class="field">
-      <label for="input-staff-pw">รหัสผ่าน</label>
-      <input id="input-staff-pw" type="password"
-             style="width:100%;padding:14px 12px;font-size:1.1rem;border:2px solid #ddd;border-radius:8px;font-family:inherit"
-             placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
-    </div>
-    <button id="btn-staff-login" class="btn btn-primary">เข้าสู่ระบบ</button>
-    <div id="msg-staff-login" class="msg"></div>
-  </div>
-</div>
+<div id="sect-login" hidden></div>
 
 <!-- ════════════════════════════════════════
      MENU
@@ -631,38 +615,8 @@ document.querySelectorAll('.mode-btn').forEach(function(btn) {
   });
 });
 
-// Page load
-if (sessionStorage.getItem('staff_auth') === '1') {
-  showMenu();
-} else {
-  showLogin();
-}
-
-// Login
-document.getElementById('input-staff-pw').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') document.getElementById('btn-staff-login').click();
-});
-document.getElementById('btn-staff-login').addEventListener('click', function() {
-  var pw = document.getElementById('input-staff-pw').value;
-  if (!pw) { showMsg('msg-staff-login', 'กรุณากรอกรหัสผ่าน', 'error'); return; }
-  setLoading('btn-staff-login', true, 'กำลังตรวจสอบ...');
-  clearMsg('msg-staff-login');
-  google.script.run
-    .withSuccessHandler(function(ok) {
-      setLoading('btn-staff-login', false, 'เข้าสู่ระบบ');
-      if (ok) {
-        sessionStorage.setItem('staff_auth', '1');
-        showMenu();
-      } else {
-        showMsg('msg-staff-login', 'รหัสผ่านไม่ถูกต้อง', 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      setLoading('btn-staff-login', false, 'เข้าสู่ระบบ');
-      showMsg('msg-staff-login', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
-    })
-    .checkStaffPassword(pw);
-});
+// Page load — ไม่มี auth, เข้าได้เลย
+showMenu();
 
 // Menu
 document.getElementById('btn-mode-single').addEventListener('click', showSingleMode);
