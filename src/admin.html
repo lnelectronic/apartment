@@ -259,6 +259,7 @@
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="billing">จัดการบิล</button>
     <button class="tab-btn" data-tab="rooms">จัดการห้อง</button>
+    <button class="tab-btn" data-tab="meter">สรุปมิเตอร์</button>
     <button class="tab-btn tab-link" onclick="openStaffPage()">จดค่ามิเตอร์ ↗</button>
   </div>
 
@@ -341,6 +342,35 @@
   </div>
 
   <!-- ─── Rooms ─── -->
+  <!-- ─── Meter Summary ─── -->
+  <div id="tab-meter" class="content" hidden>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">สรุปการใช้ไฟ / น้ำ</div>
+        <select id="meter-month-sel" class="txt-sm" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem"></select>
+      </div>
+      <div id="meter-msg" class="alert" style="display:none;margin-bottom:12px"></div>
+      <div id="meter-loading" class="loading-box" style="display:none">
+        <span class="spinner spinner-dark"></span> กำลังโหลด...
+      </div>
+      <div id="meter-content" hidden>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ห้อง</th><th>ชื่อผู้เช่า</th>
+                <th style="color:#e67e22">ไฟ-เริ่ม</th><th style="color:#e67e22">ไฟ-ถึง</th><th style="color:#e67e22">ไฟ-ใช้</th>
+                <th style="color:#2980b9">น้ำ-เริ่ม</th><th style="color:#2980b9">น้ำ-ถึง</th><th style="color:#2980b9">น้ำ-ใช้</th>
+              </tr>
+            </thead>
+            <tbody id="meter-tbody"></tbody>
+            <tfoot id="meter-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-rooms" class="content" hidden>
     <div class="card">
       <div class="card-title">จัดการข้อมูลห้องพัก</div>
@@ -494,12 +524,13 @@ function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
-  ['dashboard','billing','rooms'].forEach(function(t) {
+  ['dashboard','billing','meter','rooms'].forEach(function(t) {
     document.getElementById('tab-' + t).hidden = (t !== name);
   });
 
   if (name === 'billing') renderBillingTab();
   if (name === 'rooms')   loadRoomsTab();
+  if (name === 'meter')   loadMeterTab();
 }
 
 // ──────────────────────────────────────────
@@ -701,6 +732,79 @@ function saveBillingRow(i) {
 }
 
 // ──────────────────────────────────────────
+// Meter Summary Tab
+// ──────────────────────────────────────────
+function loadMeterTab() {
+  var sel = document.getElementById('meter-month-sel');
+  if (!sel.options.length) {
+    var months = _prev3Months(S.monthYear);
+    months.forEach(function(m, i) {
+      var opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      if (i === 0) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() { _fetchMeterData(this.value); });
+  }
+  _fetchMeterData(sel.value || S.monthYear);
+}
+
+function _prev3Months(monthYear) {
+  var p = monthYear.split('/'), m = parseInt(p[0]), y = parseInt(p[1]);
+  var result = [];
+  for (var i = 0; i < 3; i++) {
+    result.push(m + '/' + y);
+    m--; if (m < 1) { m = 12; y--; }
+  }
+  return result;
+}
+
+function _fetchMeterData(monthYear) {
+  var loading = document.getElementById('meter-loading');
+  var content = document.getElementById('meter-content');
+  loading.style.display = 'block';
+  content.hidden = true;
+  clearEl('meter-msg');
+  google.script.run
+    .withSuccessHandler(function(data) {
+      loading.style.display = 'none';
+      _renderMeterTab(data.rooms || []);
+    })
+    .withFailureHandler(function(err) {
+      loading.style.display = 'none';
+      showMsg('meter-msg', 'โหลดไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getDashboardData(monthYear);
+}
+
+function _renderMeterTab(rooms) {
+  var rows = rooms.filter(function(r) { return r.elecEnd || r.waterEnd; });
+  var totalElec = 0, totalWater = 0;
+  document.getElementById('meter-tbody').innerHTML = rows.map(function(r) {
+    totalElec  += r.elecUsed  || 0;
+    totalWater += r.waterUsed || 0;
+    return '<tr>'
+      + '<td class="room-id-lbl">' + r.roomId + '</td>'
+      + '<td>' + escHtml(r.name || '') + '</td>'
+      + '<td>' + (r.elecStart  || 0) + '</td>'
+      + '<td>' + (r.elecEnd    || 0) + '</td>'
+      + '<td><strong style="color:#e67e22">' + (r.elecUsed  || 0) + '</strong></td>'
+      + '<td>' + (r.waterStart || 0) + '</td>'
+      + '<td>' + (r.waterEnd   || 0) + '</td>'
+      + '<td><strong style="color:#2980b9">' + (r.waterUsed || 0) + '</strong></td>'
+      + '</tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">ยังไม่มีข้อมูลเดือนนี้</td></tr>';
+  document.getElementById('meter-tfoot').innerHTML =
+    '<tr style="background:#f5f7fa;font-weight:700">'
+    + '<td colspan="4" style="text-align:right;padding:10px 12px;color:#555">รวมทั้งหมด</td>'
+    + '<td style="padding:10px 12px;color:#e67e22">' + totalElec + ' หน่วย</td>'
+    + '<td colspan="2" style="text-align:right;padding:10px 12px;color:#555">รวมทั้งหมด</td>'
+    + '<td style="padding:10px 12px;color:#2980b9">' + totalWater + ' หน่วย</td>'
+    + '</tr>';
+  document.getElementById('meter-content').hidden = false;
+}
+
+// ──────────────────────────────────────────
 // Rooms Tab
 // ──────────────────────────────────────────
 function loadRoomsTab() {
@@ -770,6 +874,7 @@ function saveRoomRow(roomId, id) {
       if (S.allRooms) {
         var rec = S.allRooms.filter(function(r) { return r.roomId === roomId; })[0];
         if (rec) { rec.name = name; rec.rent = rent; rec.furniture = furniture; rec.elecInit = elecInit; rec.waterInit = waterInit; }
+        renderRoomsTab(S.allRooms);
       }
       showMsg('rooms-msg', 'อัปเดตห้อง ' + roomId + ' สำเร็จ', 'success');
     })
@@ -852,7 +957,7 @@ function showBill(rec) {
     { lbl: 'ค่าเช่า',          val: rec.rent      || 0 },
     { lbl: 'ค่าเฟอร์นิเจอร์', val: rec.furniture || 0 },
     { lbl: 'ค่าไฟ',  sub: elecStart  + ' → ' + elecEnd  + ' (' + elecUsed  + ' หน่วย)', val: elecAmount  },
-    { lbl: 'ค่าน้ำ', sub: waterStart + ' → ' + waterEnd + ' (' + waterUsed + ' หน่วย)', val: waterAmount }
+    { lbl: 'ค่าน้ำ', sub: waterStart + ' → ' + waterEnd + ' (' + waterUsed + ' หน่วย' + (waterUsed < 6 ? ' · ขั้นต่ำ' : '') + ')', val: waterAmount }
   ];
   if (item1Amount) lines.push({ lbl: escHtml(rec.item1Name || 'รายการอื่น 1'), val: item1Amount });
   if (item2Amount) lines.push({ lbl: escHtml(rec.item2Name || 'รายการอื่น 2'), val: item2Amount });

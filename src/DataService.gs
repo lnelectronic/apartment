@@ -68,10 +68,10 @@ function getRoom(roomId) {
 }
 
 function getRates(building) {
-  var data = _getSettingsSheet().getRange('A2:C3').getValues();
+  var data = _getSettingsSheet().getRange('A2:D3').getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] === building) {
-      return { water: data[i][1], electricity: data[i][2] };
+      return { water: data[i][1], electricity: data[i][2], waterMin: data[i][3] };
     }
   }
   return null;
@@ -121,7 +121,7 @@ function saveRecord(data) {
   var elecUsed    = data.elecEnd   - data.elecStart;
   var elecAmount  = elecUsed       * rates.electricity;
   var waterUsed   = data.waterEnd  - data.waterStart;
-  var waterAmount = waterUsed      * rates.water;
+  var waterAmount = waterUsed < 6 ? rates.waterMin : waterUsed * rates.water;
   var item1Amount = data.item1Amount || 0;
   var item2Amount = data.item2Amount || 0;
 

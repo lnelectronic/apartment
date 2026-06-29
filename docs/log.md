@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-06-29 (2)
+
+### feat: เปลี่ยนวิธีคำนวณค่าน้ำ — All-or-nothing threshold (DataService.gs, SheetSetup.gs, admin.html, design.md)
+
+**กฎใหม่**:
+- ใช้น้ำ < 6 หน่วย → คิด `waterMin` (ขั้นต่ำ) บาทคงที่
+- ใช้น้ำ ≥ 6 หน่วย → `waterUsed × rates.water` บาท
+- threshold 6 hardcoded ใน `saveRecord()`
+
+**การเปลี่ยนแปลง**:
+- `SheetSetup.gs`: เพิ่ม col D `ราคาน้ำขั้นต่ำ (บาท)` ค่าเริ่มต้น 120 ทั้งตึก C และ R
+- `DataService.gs`: `getRates()` อ่าน `A2:D3` คืน field `waterMin`; `saveRecord()` ใช้ logic ใหม่
+- `admin.html`: บิลแสดง `"X หน่วย · ขั้นต่ำ"` เมื่อ waterUsed < 6
+
+---
+
+## 2026-06-29
+
+### fix: หน้าจัดการห้อง — หลังกดบันทึก ไม่อัพเดท UI (admin.html)
+**ปัญหา**: กดบันทึกในหน้า "จัดการห้อง" แล้ว badge "ว่าง" ไม่หาย, ปุ่ม "ย้ายออก" ไม่ปรากฏ/หาย, row ไม่ reflect ค่าใหม่ (ต้อง switch tab แล้วกลับมาถึงจะเห็น)
+
+**สาเหตุ**: `saveRoomRow` success handler อัปเดต `S.allRooms` ใน memory แต่ไม่เรียก `renderRoomsTab()` ซ้ำ — DOM ยังคง HTML เก่า
+
+**แก้ไข**: เพิ่ม `renderRoomsTab(S.allRooms)` ต่อจาก update `S.allRooms` ใน success handler (admin.html:876)
+
+---
+
 ## 2026-06-28
 
 ### fix: NaN dashboard + สีการ์ด (DataService.gs, admin.html)

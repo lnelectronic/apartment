@@ -26,17 +26,59 @@ function setupSheets() {
 }
 
 // ------------------------------------------------------------------ //
+// Migration: เพิ่ม col D ราคาน้ำขั้นต่ำ โดยไม่แตะข้อมูลห้องเดิม
+// รันครั้งเดียวบน Sheet ที่มีข้อมูลผู้เช่าอยู่แล้ว
+function migrateAddWaterMin() {
+  var sheet = _getSettingsSheet();
+
+  // ตรวจว่า col D มีค่าแล้วหรือยัง (ป้องกันรันซ้ำ)
+  var existing = sheet.getRange('D1').getValue();
+  if (existing && existing !== '') {
+    Logger.log('migrateAddWaterMin: col D มีข้อมูลอยู่แล้ว (' + existing + ') — ข้าม');
+    return;
+  }
+
+  // เพิ่ม header col D
+  sheet.getRange('D1').setValue('ราคาน้ำขั้นต่ำ (บาท)');
+
+  // ใส่ค่า 120 ทั้ง row C (row 2) และ R (row 3)
+  sheet.getRange('D2:D3').setValues([[120], [120]]);
+
+  // จัด style header ให้เข้ากับ A1:C1 เดิม
+  var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
+  sheet.getRange('D1').setTextStyle(headerStyle).setBackground('#4a86e8').setFontColor('#ffffff').setHorizontalAlignment('center');
+  sheet.setColumnWidth(4, 160);
+
+  // ใส่สีสลับบรรทัดให้ส่วนรายชื่อห้อง
+  _applyRoomBanding(sheet);
+
+  SpreadsheetApp.flush();
+  Logger.log('migrateAddWaterMin: เพิ่ม col D ราคาน้ำขั้นต่ำ = 120 + สีสลับบรรทัด สำเร็จ');
+}
+
+function _applyRoomBanding(sheet) {
+  // ลบ banding เก่าออกก่อน (ป้องกัน error ถ้ารันซ้ำ)
+  sheet.getBandings().forEach(function(b) { b.remove(); });
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 6) return; // ยังไม่มีข้อมูลห้อง
+
+  sheet.getRange(6, 1, lastRow - 5, 6)
+    .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
+}
+
+// ------------------------------------------------------------------ //
 
 function _setupSettingsSheet(sheet, ss) {
   sheet.clearContents();
   sheet.clearFormats();
 
   // ส่วนที่ 1: ราคาสาธารณูปโภค (row 1-3)
-  var rateHeaders = [['ตึก', 'ราคาน้ำต่อหน่วย (บาท)', 'ราคาไฟต่อหน่วย (บาท)']];
-  sheet.getRange('A1:C1').setValues(rateHeaders);
-  sheet.getRange('A2:C3').setValues([
-    ['C', 10, 5],
-    ['R', 10, 5]
+  var rateHeaders = [['ตึก', 'ราคาน้ำต่อหน่วย (บาท)', 'ราคาไฟต่อหน่วย (บาท)', 'ราคาน้ำขั้นต่ำ (บาท)']];
+  sheet.getRange('A1:D1').setValues(rateHeaders);
+  sheet.getRange('A2:D3').setValues([
+    ['C', 10, 5, 120],
+    ['R', 10, 5, 120]
   ]);
 
   // row 4 ว่าง (spacer)
@@ -56,7 +98,7 @@ function _setupSettingsSheet(sheet, ss) {
 
   // Formatting
   var headerStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
-  sheet.getRange('A1:C1').setTextStyle(headerStyle).setBackground('#4a86e8').setFontColor('#ffffff');
+  sheet.getRange('A1:D1').setTextStyle(headerStyle).setBackground('#4a86e8').setFontColor('#ffffff');
   sheet.getRange('A5:F5').setTextStyle(headerStyle).setBackground('#6aa84f').setFontColor('#ffffff');
   sheet.getRange('A1:F1').setHorizontalAlignment('center');
   sheet.getRange('A5:F5').setHorizontalAlignment('center');
@@ -67,6 +109,9 @@ function _setupSettingsSheet(sheet, ss) {
   sheet.setColumnWidth(5, 150);
   sheet.setColumnWidth(6, 150);
   sheet.setFrozenRows(0);
+
+  // สีสลับบรรทัดส่วนรายชื่อห้อง
+  _applyRoomBanding(sheet);
 
   // DataService.gs ใช้ hardcoded range แทน named range เพื่อความเรียบง่าย
 }
@@ -324,7 +369,7 @@ function _getRoomList() {
     // ตึก R (Runway) — 27 ห้อง
     'R15', 'R16', 'R17', 'R18', 'R19', 'R20A',
     'R21', 'R22', 'R23', 'R24', 'R25', 'R26', 'R27', 'R28', 'R29',
-    'R30A', 'R32', 'R33', 'R34', 'R35', 'R36', 'R37', 'R39',
+    'R30A', 'R31', 'R32', 'R33', 'R34', 'R35', 'R36', 'R37', 'R39',
     'RC1', 'RC2', 'RC3', 'RC4'
   ];
 }

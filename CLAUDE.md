@@ -32,7 +32,7 @@ App-Room/
 - **ตึกชยางกูร** → prefix `C` → `C101`, `C201`..`C209`, `C301`..`C309`
 - **ตึก Runway** → prefix `R` → `R15`..`R39`, `RC1`..`RC4`
 - Parse ตึกด้วย `room[0]` (`C` หรือ `R`)
-- รวม 46 ห้อง (C: 19, R: 27)
+- รวม 47 ห้อง (C: 19, R: 28)
 
 ### Web App
 - **1 deployment**, แยกหน้าด้วย URL parameter: `?page=staff` และ `?page=admin`
