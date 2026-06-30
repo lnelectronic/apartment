@@ -226,9 +226,15 @@ function _meterStatusForNew(meterType) {
 
 function _mergeMeterStatus(currentStatus, meterType) {
   if (meterType === 'both') return 'draft';
-  if (meterType === 'elec'  && currentStatus === 'draft-water') return 'draft';
-  if (meterType === 'water' && currentStatus === 'draft-elec')  return 'draft';
-  return currentStatus; // re-save ประเภทเดิม หรือ draft อยู่แล้ว → คงสถานะ
+  if (meterType === 'elec') {
+    if (currentStatus === 'draft-water' || currentStatus === 'draft') return 'draft';
+    return 'draft-elec';
+  }
+  if (meterType === 'water') {
+    if (currentStatus === 'draft-elec' || currentStatus === 'draft') return 'draft';
+    return 'draft-water';
+  }
+  return currentStatus;
 }
 
 function getMonthMeterSummary(monthStr) {

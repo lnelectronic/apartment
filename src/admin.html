@@ -90,6 +90,10 @@
     td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #fafbff; }
+    th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 2px 0 6px rgba(0,0,0,0.12); }
+    th:first-child { background: #f5f7fa; z-index: 2; }
+    td:first-child { background: white; }
+    tr:hover td:first-child { background: #fafbff; }
 
     /* ── Badges ── */
     .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
@@ -209,6 +213,13 @@
 
     /* ── Checkout modal ── */
     #modal-checkout {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 500;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
+    }
+
+    /* ── Checkin modal ── */
+    #modal-checkin {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 500;
       display: flex; align-items: flex-start; justify-content: center;
       padding: 24px 16px; overflow-y: auto;
@@ -687,6 +698,7 @@ function switchTab(name) {
     document.getElementById('tab-' + t).hidden = (t !== name);
   });
 
+  if (name === 'dashboard') { S.dashData = null; loadDashboard(); }
   if (name === 'billing') renderBillingTab();
   if (name === 'rooms')   loadRoomsTab();
   if (name === 'meter')   loadMeterTab();

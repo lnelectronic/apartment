@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-30 (15)
+
+### fix: _mergeMeterStatus ส่งค่าว่างกลับเมื่อ currentStatus เป็น blank
+
+**ปัญหา**: หลังผู้ใช้ลบค่า 'confirmed' ออกจาก col W ด้วยตนเอง — row นั้นมี meterStatus='' เมื่อ saveRecord() อัพเดทด้วย meterType='elec' หรือ 'water' — `_mergeMeterStatus('', 'elec')` ตกลง fallback `return currentStatus` คืนค่า '' กลับ → col 23 ยังเป็น blank หลัง save → admin มิเตอร์ page แสดงว่า existingEnd=null (ดูเหมือนไม่ได้ save) และ confirmMonth() ไม่ confirm row นั้น
+
+**สาเหตุ**: `_mergeMeterStatus` ไม่มี case สำหรับ blank/unknown status — `return currentStatus` propagate '' กลับ
+
+**แก้ไข**: `DataService.gs` — `_mergeMeterStatus()`: แทน fallback ด้วย explicit return 'draft-elec'/'draft-water' ตาม meterType; คง logic merge 'draft' เมื่อทั้งสอง type ถูกบันทึกแล้ว
+
+### feat: admin dashboard auto-refresh เมื่อกลับมาที่ Dashboard tab
+
+**ปัญหา**: หลัง staff จดมิเตอร์จากอุปกรณ์อื่น (แบบ real-time) — admin ที่ค้างอยู่บน Dashboard ไม่เห็นการเปลี่ยนแปลงจนกว่าจะกดปุ่ม "รีเฟรช" เอง
+
+**แก้ไข**: `admin.html` — `switchTab()`: เพิ่ม `S.dashData = null; loadDashboard()` เมื่อ navigate มาที่ 'dashboard' tab — ดึงข้อมูลใหม่ทุกครั้ง
+
+### feat: sticky column "ห้อง" ในทุกตาราง admin
+
+**การเปลี่ยนแปลง**: `admin.html` — เพิ่ม CSS `position: sticky; left: 0` กับ `th:first-child` และ `td:first-child` พร้อม box-shadow ด้านขวาและ hover highlight — ป้องกันกรอกข้อมูลผิดห้องเมื่อ scroll แนวนอน
+
+---
+
 ## 2026-06-29 (14)
 
 ### fix: Approve button disabled จนกว่าทุก 47 ห้องจะมีข้อมูลมิเตอร์ครบ
